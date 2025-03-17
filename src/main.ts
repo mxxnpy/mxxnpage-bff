@@ -10,7 +10,9 @@ async function bootstrap() {
   // Enable CORS for GitHub Pages and local development
   app.enableCors({
     origin: [
-      'https://mxxnpy.github.io', 
+      'https://mxxnpy.github.io',
+      'https://mxxnpy.github.io/mxxnpage',
+      'https://mxxnpy.github.io/mxxnpage/', 
       'http://localhost:4200', 
       'http://localhost:3000', 
       'http://localhost:4202'
@@ -40,7 +42,7 @@ async function bootstrap() {
     .config('Personal Status Dashboard API')
     .build('moon');
 
-  await app.listen(process.env.PORT || 3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+    await app.listen(process.env.PORT || 3000, '0.0.0.0');
+    console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

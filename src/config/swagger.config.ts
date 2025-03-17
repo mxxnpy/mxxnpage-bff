@@ -29,8 +29,9 @@ export class SwaggerBuilder {
     
     // Add server URLs
     const port = process.env.PORT || 3000;
+    this.swaggerConfig.addServer(`http://localhost:${port}`, 'local');
     this.swaggerConfig.addServer('https://mxxnpage-bff.onrender.com', 'production');
-    
+    this.swaggerConfig.addServer('https://mxxnpage-bff.onrender.com/backend', 'production with prefix');    
     return this;
   }
 
