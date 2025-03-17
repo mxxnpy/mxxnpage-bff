@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: mxxnpage-bff
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SPOTIFY_CLIENT_ID
+        value: c92287abf92e468facb0def23242ee00
+      - key: SPOTIFY_CLIENT_SECRET
+        value: 856e294beaf9431189aa2dfe0c9521c9
+      - key: SPOTIFY_REDIRECT_URI
+        value: https://mxxnpage-bff.onrender.com/backend/spotify/auth/callback
+      - key: GITHUB_TOKEN
+        value: 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
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_REDIRECT_URI
+        value: https://mxxnpage-bff.onrender.com/backend/discord/auth/callback

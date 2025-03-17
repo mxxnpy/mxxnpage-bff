@@ -1,0 +1,8 @@
+{
+  "access_token": "BQDP4nti346eVboVW9KYqb8uefKZcTWC2UVXkSsdlIChnI0E57gO0gqMrV3euHF0_lS5HRcd7lyM0Ha45wTqK_qFKsi_FEQK_T48I19_nXdN_QkmzT3oDt3f-pyKWKaamGslUURh05n0Or-WAEjQSBlJZAaoAt2Fwpl90OqEXFu-ZhCW_fu-jrdwXvYgLwtbjE3BBV1eDjlEbSTs_488d_Ny-Kw7njVW_cjX91403QqIETNPcqIShTmSvcQqbzTtV3N_uPJ2u0cdlQ",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "AQAuNPFzqcFkyo7LWvmAQzHwDl4cR_7WeHDBJv5TsEqbIrzls_417iAlGWvP2vDdWiXCTZZiUNL7Xp_0mzOtFOmw47eTXEIQBjGDth3lhc7opKW8eBYSWmtGNzx3tMJxpv4",
+  "scope": "playlist-read-private playlist-read-collaborative user-read-currently-playing user-read-email user-read-recently-played user-read-private user-top-read",
+  "expires_at": 1742173116929
+}
