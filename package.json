@@ -22,6 +22,7 @@
   "description": "",
   "dependencies": {
     "@nestjs/axios": "^4.0.0",
+    "@nestjs/cli": "^11.0.5",
     "@nestjs/common": "^11.0.11",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.11",
@@ -41,7 +42,6 @@
     "typescript": "^5.8.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.5",
     "@nestjs/testing": "^11.0.11",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.0",
