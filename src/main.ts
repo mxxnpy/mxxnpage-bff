@@ -13,9 +13,8 @@ async function bootstrap() {
       'https://mxxnpy.github.io',
       'https://mxxnpy.github.io/mxxnpage',
       'https://mxxnpy.github.io/mxxnpage/', 
-      'http://localhost:4200', 
-      'http://localhost:3000', 
-      'http://localhost:4202'
+      'https://mxxnpy.github.io/mxxnpage/browser',
+      'https://mxxnpy.github.io/mxxnpage/browser/'
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -42,7 +41,9 @@ async function bootstrap() {
     .config('Personal Status Dashboard API')
     .build('moon');
 
-    await app.listen(process.env.PORT || 3000, '0.0.0.0');
-    console.log(`Application is running on: ${await app.getUrl()}`);
+  // Forçar o uso de IPv4 e desabilitar IPv6
+  const server = await app.listen(process.env.PORT || 3000, '0.0.0.0');
+  server.address = () => ({ address: '0.0.0.0', family: 'IPv4', port: process.env.PORT || 3000 });
+  console.log(`Application is running on: https://mxxnpage-bff.onrender.com`);
 }
 bootstrap();
