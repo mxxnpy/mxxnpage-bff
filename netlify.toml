@@ -1,7 +1,11 @@
 [build]
-  command = "npm install --production=false ts-loader && npx nest build --webpack"
+  command = "npm install --production=false ts-loader class-transformer && npx nest build --webpack"
   publish = "dist"
   functions = "netlify/functions"
+
+[functions]
+  external_node_modules = ["class-transformer/storage", "@nestjs/microservices", "@nestjs/websockets", "@nestjs/websockets/socket-module", "@nestjs/microservices/microservices-module", "@nestjs/platform-socket.io", "@grpc/grpc-js", "@grpc/proto-loader", "ioredis", "amqplib", "amqp-connection-manager", "nats", "kafkajs", "mqtt", "redis"]
+  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "20"
