@@ -4,7 +4,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build --webpack",
-    "postbuild": "cp -r netlify dist/",
+    "postbuild": "cp -r netlify dist/ && cp .env dist/",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

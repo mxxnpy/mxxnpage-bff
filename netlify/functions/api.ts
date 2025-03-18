@@ -30,14 +30,19 @@ let cachedHandler: any;
 let cachedServer: any;
 
 export const handler: Handler = async (event, context) => {
-  if (!cachedHandler) {
-    try {
+  try {
+    if (!cachedHandler) {
       console.log('Initializing NestJS application...');
+      console.log('Environment variables available:', Object.keys(process.env).filter(key => !key.startsWith('AWS_')));
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('GITHUB_TOKEN available:', !!process.env.GITHUB_TOKEN);
+      console.log('SPOTIFY_CLIENT_ID available:', !!process.env.SPOTIFY_CLIENT_ID);
+      
       const expressApp = express();
       const nestApp = await NestFactory.create(
         AppModule,
         new ExpressAdapter(expressApp),
-        { logger: ['error', 'warn', 'log'] } // Logs mais detalhados
+        { logger: ['error', 'warn', 'log'] }
       );
       
       // Enable CORS for GitHub Pages and Netlify
@@ -73,19 +78,45 @@ export const handler: Handler = async (event, context) => {
       console.log('NestJS app initialized successfully');
       cachedServer = expressApp;
       cachedHandler = serverless(cachedServer);
-    } catch (error) {
-      console.error('Error initializing NestJS app:', error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ 
-          error: 'Internal Server Error', 
-          message: 'Failed to initialize application',
-          details: error.message,
-          stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-        })
-      };
     }
+    
+    return cachedHandler(event, context);
+  } catch (error) {
+    console.error('Error handling request:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ 
+        error: 'Internal Server Error', 
+        message: 'Failed to process request',
+        details: error.message,
+        path: event.path,
+        method: event.httpMethod,
+        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+      })
+    };
   }
-  
-  return cachedHandler(event, context);
 };
+2. src/app.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { StatusModule } from './api/status/status.module';
+import { GithubModule } from './api/github/github.module';
+import { SpotifyModule } from './api/spotify/spotify.module';
+import { DiscordModule } from './api/discord/discord.module';
+import { WeatherModule } from './api/weather/weather.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+    }),
+    StatusModule,
+    GithubModule,
+    SpotifyModule,
+    DiscordModule,
+    WeatherModule,
+  ],
+})
+export class AppModule {}

@@ -15,7 +15,10 @@ export class GithubService {
     private readonly configService: ConfigService,
   ) {
     this.apiUrl = this.configService.get<string>('GITHUB_API_URL', 'https://api.github.com');
-    this.token = this.configService.get<string>('GITHUB_TOKEN'); console.log("GitHub Token:", this.token);
+    this.token = this.configService.get<string>('GITHUB_TOKEN') || '';
+    if (!this.token) {
+      this.logger.warn('GITHUB_TOKEN is not set. GitHub API requests may be rate-limited.');
+    }
   }
 
   async getUserProfile(username: string) {
