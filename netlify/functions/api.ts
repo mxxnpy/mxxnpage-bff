@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../src/app.module';
 import serverless from 'serverless-http';
-import cookieParser from 'cookie-parser';
+const cookieParser = require('cookie-parser');
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 
