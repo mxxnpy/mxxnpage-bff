@@ -11,6 +11,11 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://mxxnpy.github.io',
+      'https://mxxnpy.github.io/mxxnpage/#/home',
+      'https://mxxnpy.github.io/mxxnpage/#/home/',
+      'https://mxxnpy.github.io/mxxnpage/#/spotify',
+      'https://mxxnpy.github.io/mxxnpage/#/project',
+      'https://mxxnpy.github.io/mxxnpage/#/',
       'https://mxxnpy.github.io/mxxnpage',
       'https://mxxnpy.github.io/mxxnpage/', 
       'https://mxxnpy.github.io/mxxnpage/browser',
