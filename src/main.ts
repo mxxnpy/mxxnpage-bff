@@ -49,6 +49,6 @@ async function bootstrap() {
   // Forçar o uso de IPv4 e desabilitar IPv6
   const server = await app.listen(process.env.PORT || 3000, '0.0.0.0');
   server.address = () => ({ address: '0.0.0.0', family: 'IPv4', port: process.env.PORT || 3000 });
-  console.log(`Application is running on: https://mxxnpage-bff.onrender.com`);
+  console.log(`Application is running on: https://mxxnbff.netlify.app`);
 }
 bootstrap();

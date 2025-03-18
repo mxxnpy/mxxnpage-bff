@@ -31,7 +31,7 @@ export class SwaggerBuilder {
     const port = process.env.PORT || 3000;
     this.swaggerConfig.addServer(`http://localhost:${port}`, 'local');
     this.swaggerConfig.addServer('https://mxxnbff.netlify.app', 'production');
-    this.swaggerConfig.addServer('https://mxxnbff.netlify.app', 'production with prefix');    
+    this.swaggerConfig.addServer('https://mxxnbff.netlify.app/backend', 'production with prefix');    
     return this;
   }
 
