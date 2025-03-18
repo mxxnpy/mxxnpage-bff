@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npx nest build"
+  command = "npm install --production=false && npx nest build --webpack"
   publish = "dist"
   functions = "netlify/functions"
 
