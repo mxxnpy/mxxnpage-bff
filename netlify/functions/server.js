@@ -1,8 +1,9 @@
+// This file provides a standalone server for Netlify deployment
 const { NestFactory } = require('@nestjs/core');
 const { ExpressAdapter } = require('@nestjs/platform-express');
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const { AppModule } = require('../../dist/src/app.module');
+const { AppModule } = require('../../src/app.module');
 
 async function bootstrap() {
   const expressApp = express();
