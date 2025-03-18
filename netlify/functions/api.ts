@@ -1,16 +1,34 @@
-import { Handler } from '@netlify/functions';
+import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../src/app.module';
 import serverless from 'serverless-http';
+import cookieParser from 'cookie-parser';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 
-let cachedHandler: Handler;
+// Define a custom type to handle the type mismatch between serverless-http and Netlify functions
+type ServerlessHandler = (event: HandlerEvent, context: HandlerContext) => Promise<any>;
+
+let cachedHandler: ServerlessHandler;
+let cachedServer: any;
 
 export const handler: Handler = async (event, context) => {
   if (!cachedHandler) {
-    const app = await NestFactory.create(AppModule);
-    app.setGlobalPrefix('backend');
-    await app.init();
-    cachedHandler = serverless(app.getHttpAdapter().getInstance());
+    const expressApp = express();
+    const nestApp = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(expressApp),
+      { logger: ['error', 'warn'] }
+    );
+    
+    nestApp.use(cookieParser());
+    nestApp.setGlobalPrefix('backend');
+    await nestApp.init();
+    
+    cachedServer = expressApp;
+    // Cast the serverless handler to our custom type to resolve type issues
+    cachedHandler = serverless(cachedServer) as unknown as ServerlessHandler;
   }
+  
   return cachedHandler(event, context);
 };
