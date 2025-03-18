@@ -2,9 +2,6 @@
   command = "npm install && npx nest build && npm run start:prod"
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "20"
-  NPM_FLAGS = "--no-optional"
 
 [[redirects]]
   from = "/*"
