@@ -19,7 +19,9 @@ async function bootstrap() {
       'https://mxxnpy.github.io/mxxnpage',
       'https://mxxnpy.github.io/mxxnpage/', 
       'https://mxxnpy.github.io/mxxnpage/browser',
-      'https://mxxnpy.github.io/mxxnpage/browser/'
+      'https://mxxnpy.github.io/mxxnpage/browser/',
+      'https://mxxnbff.netlify.app',
+      'https://mxxnbff.netlify.app/'
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

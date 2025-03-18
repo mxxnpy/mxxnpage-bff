@@ -1,11 +1,7 @@
 [build]
-  command = "npm install --production=false ts-loader class-transformer && npx nest build --webpack"
+  command = "npm install --production=false ts-loader class-transformer && node netlify/functions/patch_mapped_types.js && npx nest build --webpack"
   publish = "dist"
   functions = "netlify/functions"
-
-[functions]
-  external_node_modules = ["class-transformer/storage", "@nestjs/microservices", "@nestjs/websockets", "@nestjs/websockets/socket-module", "@nestjs/microservices/microservices-module", "@nestjs/platform-socket.io", "@grpc/grpc-js", "@grpc/proto-loader", "ioredis", "amqplib", "amqp-connection-manager", "nats", "kafkajs", "mqtt", "redis"]
-  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -13,16 +9,18 @@
 
 [[redirects]]
   from = "/*"
-  to = "/backend/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
-
-[[redirects]]
-  from = "/"
-  to = "/backend/docs"
-  status = 302
 
 [dev]
   command = "npm run start:dev"
   port = 3000
   targetPort = 3000
   framework = "nestjs"
+
+[functions]
+  external_node_modules = ["class-transformer/storage", "@nestjs/microservices", "@nestjs/websockets", "@nestjs/websockets/socket-module", "@nestjs/microservices/microservices-module", "@nestjs/platform-socket.io", "@grpc/grpc-js", "@grpc/proto-loader", "ioredis", "amqplib", "amqp-connection-manager", "nats", "kafkajs", "mqtt", "redis"]
+  node_bundler = "esbuild"
+
+[functions.esbuild_config]
+  external = ["class-transformer/storage"]
