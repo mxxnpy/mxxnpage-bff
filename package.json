@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/main.js",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build --webpack",
     "postbuild": "cp -r netlify dist/",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
