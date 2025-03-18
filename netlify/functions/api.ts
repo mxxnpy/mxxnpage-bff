@@ -6,7 +6,6 @@ import cookieParser from 'cookie-parser';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 
-// Mark external dependencies to exclude from bundle
 export const config = {
   external: [
     '@nestjs/microservices',
