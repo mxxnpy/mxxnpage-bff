@@ -2,14 +2,20 @@ import { Handler } from '@netlify/functions';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../src/app.module';
 import serverless from 'serverless-http';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 
-// Import required modules to ensure they're included in the bundle
-import '@nestjs/microservices';
-import '@nestjs/websockets';
-import 'class-transformer';
+// Mark external dependencies to exclude from bundle
+export const config = {
+  external: [
+    '@nestjs/microservices',
+    '@nestjs/websockets',
+    '@nestjs/websockets/socket-module',
+    '@nestjs/microservices/microservices-module',
+    'class-transformer/storage'
+  ]
+};
 
 let cachedHandler: any;
 let cachedServer: any;
