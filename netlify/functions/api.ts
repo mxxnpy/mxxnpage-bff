@@ -13,7 +13,16 @@ export const config = {
     '@nestjs/websockets',
     '@nestjs/websockets/socket-module',
     '@nestjs/microservices/microservices-module',
-    'class-transformer/storage'
+    'class-transformer/storage',
+    '@nestjs/platform-socket.io',
+    '@grpc/grpc-js',
+    '@grpc/proto-loader',
+    'ioredis',
+    'amqplib',
+    'nats',
+    'kafkajs',
+    'mqtt',
+    'redis'
   ]
 };
 
