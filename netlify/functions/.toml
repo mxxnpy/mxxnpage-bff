@@ -1,6 +1,7 @@
 [build]
   command = "npm install && npx nest build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "18"
@@ -10,14 +11,26 @@
   from = "/*"
   to = "/backend/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/"
   to = "/backend/docs"
   status = 302
+  force = true
+
+[[redirects]]
+  from = "/backend"
+  to = "/backend/docs"
+  status = 302
+  force = true
 
 [dev]
   command = "npm run start:dev"
   port = 3000
   targetPort = 3000
   framework = "nestjs"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
