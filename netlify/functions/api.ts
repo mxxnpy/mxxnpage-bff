@@ -23,7 +23,7 @@ export const config = {
     'kafkajs',
     'mqtt',
     'redis'
-]
+  ]
 };
 
 let cachedHandler: any;

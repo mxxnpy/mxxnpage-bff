@@ -46,6 +46,7 @@
     "express": "^5.0.1",
     "ioredis": "^5.3.2",
     "kafkajs": "^2.2.4",
+    "@nestjs/mapped-types": "^2.0.5",
     "mqtt": "^5.3.5",
     "nats": "^2.19.0",
     "nestjs-pino": "^4.3.1",
