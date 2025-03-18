@@ -18,11 +18,12 @@ export const config = {
     '@grpc/proto-loader',
     'ioredis',
     'amqplib',
+    'amqp-connection-manager',
     'nats',
     'kafkajs',
     'mqtt',
     'redis'
-  ]
+]
 };
 
 let cachedHandler: any;
