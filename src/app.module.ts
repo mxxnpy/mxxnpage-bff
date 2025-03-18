@@ -11,6 +11,7 @@ import { WeatherModule } from './api/weather/weather.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     StatusModule,
     GithubModule,
