@@ -4,6 +4,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",
+    "postbuild": "cp -r netlify dist/",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -28,6 +29,7 @@
     "@nestjs/core": "^11.0.11",
     "@nestjs/platform-express": "^11.0.11",
     "@nestjs/swagger": "^11.0.6",
+    "@netlify/functions": "^3.0.2",
     "@scalar/nestjs-api-reference": "^0.4.1",
     "@types/node": "^22.13.10",
     "axios": "^1.8.3",
@@ -38,6 +40,7 @@
     "pino-http": "^10.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "serverless-http": "^3.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   },

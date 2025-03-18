@@ -1,0 +1,23 @@
+[build]
+  command = "npm install && npx nest build && npm run start:prod"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--no-optional"
+
+[[redirects]]
+  from = "/*"
+  to = "/backend/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/"
+  to = "/backend/docs"
+  status = 302
+
+[dev]
+  command = "npm run start:dev"
+  port = 3000
+  targetPort = 3000
+  framework = "nestjs"
