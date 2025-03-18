@@ -1,10 +1,11 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class WeatherService {
+  private readonly logger = new Logger(WeatherService.name);
   private readonly apiKey: string;
   private readonly apiUrl = 'https://api.openweathermap.org/data/2.5';
   private readonly defaultCity = 'São Paulo';
@@ -14,7 +15,23 @@ export class WeatherService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.apiKey = this.configService.get<string>('OPENWEATHER_API_KEY') || 'demo_key';
+    try {
+      this.apiKey = process.env.WEATHER_API_KEY || 'demo_key';
+      
+      if (this.configService) {
+        const configApiKey = this.configService.get<string>('WEATHER_API_KEY');
+        if (configApiKey) {
+          this.apiKey = configApiKey;
+        }
+      }
+      
+      if (this.apiKey === 'demo_key') {
+        this.logger.warn('Using demo key for weather API. Only mock data will be returned.');
+      }
+    } catch (error) {
+      this.logger.error(`Error initializing WeatherService: ${error.message}`);
+      this.apiKey = process.env.WEATHER_API_KEY || 'demo_key';
+    }
   }
 
   async getCurrentWeather(city: string = this.defaultCity, country: string = this.defaultCountry): Promise<any> {

@@ -37,6 +37,8 @@ export const handler: Handler = async (event, context) => {
       console.log('NODE_ENV:', process.env.NODE_ENV);
       console.log('GITHUB_TOKEN available:', !!process.env.GITHUB_TOKEN);
       console.log('SPOTIFY_CLIENT_ID available:', !!process.env.SPOTIFY_CLIENT_ID);
+      console.log('DISCORD_CLIENT_ID available:', !!process.env.DISCORD_CLIENT_ID);
+      console.log('WEATHER_API_KEY available:', !!process.env.WEATHER_API_KEY);
       
       const expressApp = express();
       const nestApp = await NestFactory.create(

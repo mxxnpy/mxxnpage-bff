@@ -19,9 +19,30 @@ export class SpotifyService {
     private readonly configService: ConfigService,
     private readonly tokenStorageService: TokenStorageService,
   ) {
-    this.clientId = this.configService.get<string>('SPOTIFY_CLIENT_ID');
-    this.clientSecret = this.configService.get<string>('SPOTIFY_CLIENT_SECRET');
-    this.redirectUri = this.configService.get<string>('SPOTIFY_REDIRECT_URI') || 'http://localhost:3000/backend/spotify/auth/callback';
+    try {
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
+      this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/spotify/auth/callback';
+      
+      if (this.configService) {
+        const configClientId = this.configService.get<string>('SPOTIFY_CLIENT_ID');
+        const configClientSecret = this.configService.get<string>('SPOTIFY_CLIENT_SECRET');
+        const configRedirectUri = this.configService.get<string>('SPOTIFY_REDIRECT_URI');
+        
+        if (configClientId) this.clientId = configClientId;
+        if (configClientSecret) this.clientSecret = configClientSecret;
+        if (configRedirectUri) this.redirectUri = configRedirectUri;
+      }
+      
+      if (!this.clientId || !this.clientSecret) {
+        console.warn('Spotify credentials missing. Some Spotify API features may not work correctly.');
+      }
+    } catch (error) {
+      console.error(`Error initializing SpotifyService: ${error.message}`);
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
+      this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/spotify/auth/callback';
+    }
   }
 
   getAuthorizeUrl(scopes: string[], state: string): string {

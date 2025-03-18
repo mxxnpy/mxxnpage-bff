@@ -1,14 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class DiscordService {
+  private readonly logger = new Logger(DiscordService.name);
+  private readonly clientId: string;
+  private readonly clientSecret: string;
+  private readonly redirectUri: string;
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    try {
+      this.clientId = process.env.DISCORD_CLIENT_ID || '';
+      this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/discord/auth/callback';
+      
+      if (this.configService) {
+        const configClientId = this.configService.get<string>('DISCORD_CLIENT_ID');
+        const configClientSecret = this.configService.get<string>('DISCORD_CLIENT_SECRET');
+        const configRedirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+        
+        if (configClientId) this.clientId = configClientId;
+        if (configClientSecret) this.clientSecret = configClientSecret;
+        if (configRedirectUri) this.redirectUri = configRedirectUri;
+      }
+      
+      if (!this.clientId || !this.clientSecret) {
+        this.logger.warn('Discord credentials missing. Some Discord API features may not work correctly.');
+      }
+    } catch (error) {
+      this.logger.error(`Error initializing DiscordService: ${error.message}`);
+      this.clientId = process.env.DISCORD_CLIENT_ID || '';
+      this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/discord/auth/callback';
+    }
+  }
 
   async getPresence() {
     // In a real implementation, this would connect to Discord's API
