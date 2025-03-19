@@ -25,7 +25,12 @@ export const config = {
     'nats',
     'kafkajs',
     'mqtt',
-    'redis'
+    'redis',
+    // Adicionar os serviços para evitar tree-shaking
+    '../../src/api/github/github.service',
+    '../../src/api/spotify/spotify.service',
+    '../../src/api/weather/weather.service',
+    '../../src/api/spotify/token-storage.service'
   ]
 };
 
@@ -42,6 +47,12 @@ export const handler: Handler = async (event, context) => {
       console.log('SPOTIFY_CLIENT_ID available:', !!process.env.SPOTIFY_CLIENT_ID);
       console.log('DISCORD_CLIENT_ID available:', !!process.env.DISCORD_CLIENT_ID);
       console.log('WEATHER_API_KEY available:', !!process.env.WEATHER_API_KEY);
+      
+      // Pré-carregar os serviços para garantir que não sejam removidos pelo tree-shaking
+      require('../../src/api/github/github.service');
+      require('../../src/api/spotify/spotify.service');
+      require('../../src/api/weather/weather.service');
+      require('../../src/api/spotify/token-storage.service');
       
       const expressApp = express();
       const nestApp = await NestFactory.create(
