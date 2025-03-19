@@ -1,13 +1,15 @@
 import { Handler } from '@netlify/functions';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../../src/app.module';
-import serverless from 'serverless-http';
-const cookieParser = require('cookie-parser');
 import { ExpressAdapter } from '@nestjs/platform-express';
+import { AppModule } from '../../src/app.module';
 import express from 'express';
+import serverless from 'serverless-http';
+import { INestApplication } from '@nestjs/common';
+import { SwaggerModule } from '@nestjs/swagger';
+import { createDocument } from '../../src/config/swagger.config';
 
-export const config = {
-  external: [
+// Adicionar módulos externos para evitar que sejam removidos pelo tree-shaking
+const externalModules = [
     '@nestjs/microservices',
     '@nestjs/websockets',
     '@nestjs/websockets/socket-module',
@@ -26,89 +28,63 @@ export const config = {
     'kafkajs',
     'mqtt',
     'redis',
-    // Adicionar os serviços para evitar tree-shaking
-    '../../src/api/github/github.service',
-    '../../src/api/spotify/spotify.service',
-    '../../src/api/weather/weather.service',
-    '../../src/api/spotify/token-storage.service'
-  ]
-};
+];
 
-let cachedHandler: any;
-let cachedServer: any;
+// Garantir que os módulos externos sejam carregados
+externalModules.forEach(module => {
+    try {
+        require(module);
+    } catch (e) {
+        // Ignorar erros de módulos que não estão instalados
+    }
+});
 
-export const handler: Handler = async (event, context) => {
-  try {
-    if (!cachedHandler) {
-      console.log('Initializing NestJS application...');
-      console.log('Environment variables available:', Object.keys(process.env).filter(key => !key.startsWith('AWS_')));
-      console.log('NODE_ENV:', process.env.NODE_ENV);
-      console.log('GITHUB_TOKEN available:', !!process.env.GITHUB_TOKEN);
-      console.log('SPOTIFY_CLIENT_ID available:', !!process.env.SPOTIFY_CLIENT_ID);
-      console.log('DISCORD_CLIENT_ID available:', !!process.env.DISCORD_CLIENT_ID);
-      console.log('WEATHER_API_KEY available:', !!process.env.WEATHER_API_KEY);
-      
+let cachedNestApp: INestApplication;
+
+const handler: Handler = async (event, context) => {
+    // Importante: Isso garante que a função serverless seja executada apenas uma vez por instância
+    context.callbackWaitsForEmptyEventLoop = false;
+
+    if (!cachedNestApp) {
       // Pré-carregar os serviços para garantir que não sejam removidos pelo tree-shaking
-      require('../../src/api/github/github.service');
-      require('../../src/api/spotify/spotify.service');
-      require('../../src/api/weather/weather.service');
-      require('../../src/api/spotify/token-storage.service');
+      try {
+        console.log('Preloading services...');
+        const githubService = require('./src/api/github/github.service');
+        const spotifyService = require('./src/api/spotify/spotify.service');
+        const weatherService = require('./src/api/weather/weather.service');
+        const tokenStorageService = require('./src/api/spotify/token-storage.service');
+        
+        console.log('Services loaded:', {
+          githubService: Object.keys(githubService),
+          spotifyService: Object.keys(spotifyService),
+          weatherService: Object.keys(weatherService),
+          tokenStorageService: Object.keys(tokenStorageService)
+        });
+      } catch (error) {
+        console.error('Error preloading services:', error);
+      }
       
       const expressApp = express();
       const nestApp = await NestFactory.create(
         AppModule,
         new ExpressAdapter(expressApp),
-        { logger: ['error', 'warn', 'log'] }
+        {
+          logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+        },
       );
-      
-      // Enable CORS for GitHub Pages and Netlify
-      nestApp.enableCors({
-        origin: [
-          'https://mxxnpy.github.io',
-          'https://mxxnpy.github.io/mxxnpage/#/home',
-          'https://mxxnpy.github.io/mxxnpage/#/home/',
-          'https://mxxnpy.github.io/mxxnpage/#/spotify',
-          'https://mxxnpy.github.io/mxxnpage/#/project',
-          'https://mxxnpy.github.io/mxxnpage/#/',
-          'https://mxxnpy.github.io/mxxnpage',
-          'https://mxxnpy.github.io/mxxnpage/', 
-          'https://mxxnpy.github.io/mxxnpage/browser',
-          'https://mxxnpy.github.io/mxxnpage/browser/',
-          'https://mxxnbff.netlify.app',
-          'https://mxxnbff.netlify.app/'
-        ],
-        credentials: true,
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        preflightContinue: false,
-        optionsSuccessStatus: 204,
-        allowedHeaders: ['Content-Type', 'Authorization'],
-      });
-      
-      console.log('Setting up middleware and global prefix...');
-      nestApp.use(cookieParser());
+
       nestApp.setGlobalPrefix('backend');
       
-      console.log('Initializing NestJS app...');
+      // Configurar Swagger
+      const document = createDocument(nestApp);
+      SwaggerModule.setup('backend/docs', nestApp, document);
+
       await nestApp.init();
-      
-      console.log('NestJS app initialized successfully');
-      cachedServer = expressApp;
-      cachedHandler = serverless(cachedServer);
+      cachedNestApp = nestApp;
     }
-    
-    return cachedHandler(event, context);
-  } catch (error) {
-    console.error('Error handling request:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        error: 'Internal Server Error', 
-        message: 'Failed to process request',
-        details: error.message,
-        path: event.path,
-        method: event.httpMethod,
-        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-      })
-    };
-  }
+
+    const expressApp = cachedNestApp.getHttpAdapter().getInstance();
+    return serverless(expressApp)(event, context);
 };
+
+export { handler };
