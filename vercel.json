@@ -6,11 +6,14 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "/",
-      "dest": "/backend/docs"
-    },
+      "source": "/",
+      "destination": "/backend/docs",
+      "permanent": false
+    }
+  ],
+  "routes": [
     {
       "src": "/backend/(.*)",
       "dest": "api/index.ts"
