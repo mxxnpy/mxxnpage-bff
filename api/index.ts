@@ -96,7 +96,12 @@ export default async function handler(req, res) {
     // Handle the request with the Express server
     server(req, res);
   } catch (error) {
-    console.error('Error handling request:', error);
+    console.error('Error handling API request:', error);
+    // Include more detailed error information
+    if (error.response) {
+      console.error('Response error data:', error.response.data);
+      console.error('Response error status:', error.response.status);
+    }
     res.status(500).send('Internal Server Error');
   }
 }

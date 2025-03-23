@@ -32,6 +32,18 @@ export class GithubController {
   @ApiParam({ name: 'username', description: 'GitHub username' })
   @ApiResponse({ status: 200, description: 'Returns GitHub user contributions' })
   async getUserContributions(@Param('username') username: string) {
-    return this.githubService.getUserContributions(username);
+    try {
+      return await this.githubService.getUserContributions(username);
+    } catch (error) {
+      console.error(`Error fetching GitHub contributions for ${username}: ${error.message}`);
+      // Return a structured error response
+      return {
+        error: true,
+        message: 'Failed to fetch GitHub contributions',
+        username,
+        totalContributions: 0,
+        contributions: []
+      };
+    }
   }
 }

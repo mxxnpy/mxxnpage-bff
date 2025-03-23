@@ -79,9 +79,61 @@ export class GithubService {
 
   async getUserContributions(username: string) {
     try {
-      // GitHub doesn't have a direct API for contributions graph
-      // We'll use the user's events as a proxy for contributions
-      const events = await this.getUserActivity(username);
+      // Using GitHub GraphQL API to fetch actual contributions data
+      const query = `
+        query($username: String!) {
+          user(login: $username) {
+            name
+            contributionsCollection {
+              contributionCalendar {
+                totalContributions
+                weeks {
+                  contributionDays {
+                    date
+                    contributionCount
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+      
+      const variables = { username };
+      
+      const { data } = await firstValueFrom(
+        this.httpService.post('https://api.github.com/graphql', {
+          query,
+          variables
+        }, {
+          headers: {
+            'Authorization': `bearer ${this.token}`,
+            'Content-Type': 'application/json'
+          }
+        }).pipe(
+          catchError((error: AxiosError) => {
+            this.logger.error(`Failed to fetch GitHub contributions via GraphQL: ${error.message}`);
+            throw new Error(`Failed to fetch GitHub contributions: ${error.message}`);
+          }),
+        ),
+      );
+      
+      // Extract contributions data from GraphQL response
+      const contributionCalendar = data?.data?.user?.contributionsCollection?.contributionCalendar;
+      if (!contributionCalendar) {
+        throw new Error('Invalid GraphQL response from GitHub API');
+      }
+      
+      // Format the contributions data
+      const contributions = [];
+      contributionCalendar.weeks.forEach(week => {
+        week.contributionDays.forEach(day => {
+          contributions.push({
+            date: day.date,
+            count: day.contributionCount
+          });
+        });
+      });
       
       // Get user's repositories
       const { data: repos } = await firstValueFrom(
@@ -99,73 +151,9 @@ export class GithubService {
         ),
       );
       
-      // Get commit activity for the user's top repositories
-      const commitActivities = await Promise.all(
-        repos.map(async (repo) => {
-          try {
-            const { data } = await firstValueFrom(
-              this.httpService.get(`${this.apiUrl}/repos/${repo.full_name}/stats/commit_activity`, {
-                headers: this.getHeaders(),
-              }).pipe(
-                catchError((error: AxiosError) => {
-                  this.logger.error(`Failed to fetch commit activity for ${repo.full_name}: ${error.message}`);
-                  return [];
-                }),
-              ),
-            );
-            return {
-              repo: repo.name,
-              activity: data,
-            };
-          } catch (error) {
-            this.logger.error(`Error fetching commit activity for ${repo.full_name}: ${error.message}`);
-            return {
-              repo: repo.name,
-              activity: [],
-            };
-          }
-        }),
-      );
-      
-      // Generate a contributions grid (similar to GitHub's contribution graph)
-      const today = new Date();
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(today.getFullYear() - 1);
-      
-      // Create an array of dates for the past year
-      const dates = [];
-      for (let d = new Date(oneYearAgo); d <= today; d.setDate(d.getDate() + 1)) {
-        dates.push(new Date(d));
-      }
-      
-      // Map events to dates to count contributions
-      const contributionMap = new Map();
-      
-      // Initialize all dates with 0 contributions
-      dates.forEach(date => {
-        const dateString = date.toISOString().split('T')[0];
-        contributionMap.set(dateString, 0);
-      });
-      
-      // Count events as contributions
-      events.forEach(event => {
-        const eventDate = new Date(event.created_at);
-        const dateString = eventDate.toISOString().split('T')[0];
-        
-        if (contributionMap.has(dateString)) {
-          contributionMap.set(dateString, contributionMap.get(dateString) + 1);
-        }
-      });
-      
-      // Convert map to array of objects
-      const contributions = Array.from(contributionMap.entries()).map(([date, count]) => ({
-        date,
-        count,
-      }));
-      
       return {
         username,
-        totalContributions: contributions.reduce((sum, day) => sum + day.count, 0),
+        totalContributions: contributionCalendar.totalContributions,
         contributions,
         recentRepositories: repos.map(repo => ({
           name: repo.name,
@@ -175,7 +163,6 @@ export class GithubService {
           forks: repo.forks_count,
           language: repo.language,
         })),
-        commitActivity: commitActivities,
       };
     } catch (error) {
       this.logger.error(`Error fetching GitHub user contributions: ${error.message}`);

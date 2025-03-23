@@ -112,7 +112,17 @@ export class SpotifyService {
   }
 
   async getCurrentTrack(): Promise<any> {
-    return this.makeApiRequest('/me/player/currently-playing');
+    try {
+      return await this.makeApiRequest('/me/player/currently-playing');
+    } catch (error) {
+      console.error(`Error fetching current track: ${error.message}`);
+      // Return a structured empty response instead of throwing
+      return { 
+        is_playing: false,
+        item: null,
+        error: "Authentication required. Please authenticate with Spotify first."
+      };
+    }
   }
 
   async getRecentlyPlayed(limit: number = 20): Promise<any> {

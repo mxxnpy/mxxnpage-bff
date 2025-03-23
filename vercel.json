@@ -6,14 +6,13 @@
       "use": "@vercel/node"
     }
   ],
-
   "routes": [
     {
       "src": "/(.*)",
       "dest": "api/index.ts",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "headers": {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://mxxnpy.github.io",
         "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS"
       }

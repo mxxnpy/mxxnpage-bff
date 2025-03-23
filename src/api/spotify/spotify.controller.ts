@@ -27,8 +27,22 @@ export class SpotifyController {
     status: 200,
     description: 'Returns currently playing track information',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized or authentication required',
+  })
   async getCurrentTrack() {
-    return this.spotifyService.getCurrentTrack();
+    try {
+      return await this.spotifyService.getCurrentTrack();
+    } catch (error) {
+      console.error(`Error fetching current track: ${error.message}`);
+      // Return a structured error response
+      return {
+        is_playing: false,
+        item: null,
+        error: "Authentication required. Please authenticate with Spotify first."
+      };
+    }
   }
 
   @Get('recently-played')
