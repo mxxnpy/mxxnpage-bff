@@ -15,7 +15,7 @@ async function bootstrap() {
     },
   );
 
-  // app.setGlobalPrefix('backend'); // Prefix is handled by vercel.json routing
+  app.setGlobalPrefix('backend'); // Restore prefix for proper routing
   
   // Configure CORS for Vercel deployment
   app.enableCors({
@@ -59,6 +59,9 @@ export default async function handler(req: any, res: any) {
   if (!cachedApp) {
     cachedApp = await bootstrap();
   }
+  
+  // Log request for debugging
+  console.log(`Handling request: ${req.method} ${req.url}`);
   
   // Pass the request to the NestJS app
   server(req, res);
