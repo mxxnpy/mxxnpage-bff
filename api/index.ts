@@ -17,6 +17,24 @@ async function bootstrap() {
 
   app.setGlobalPrefix('backend');
   
+  // Configure CORS for Vercel deployment
+  app.enableCors({
+    origin: [
+      'https://mxxnpy.github.io',
+      'https://mxxnpy.github.io/mxxnpage',
+      'https://mxxnpy.github.io/mxxnpage/',
+      'https://mxxnpy.github.io/mxxnpage/browser',
+      'https://mxxnpy.github.io/mxxnpage/browser/',
+      'https://mxxnpage-bff.vercel.app',
+      'https://mxxnpage-bff.vercel.app/',
+      'https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app',
+      'https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app/'
+    ],
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization']
+  });
+  
   // Configure Swagger
   const config = new DocumentBuilder()
     .setTitle('Personal Status Dashboard API')
