@@ -39,101 +39,116 @@ export class DiscordService {
       this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/discord/auth/callback';
     }
   }
-
+  
   async getPresence() {
-    // In a real implementation, this would connect to Discord's API
-    // For this demo, we'll simulate the presence data
-    const activities = await this.getActivity();
-    const currentTime = new Date();
-    const hours = currentTime.getHours();
-    const day = currentTime.getDay();
-    
-    // Determine status based on time and day
-    let status = 'online';
-    let statusText = 'Online';
-    
-    // Weekend (0 = Sunday, 6 = Saturday)
-    if (day === 0 || day === 6) {
-      statusText = 'Free Time';
-    } else {
-      // Weekday
-      if (hours >= 8 && hours < 18) {
-        statusText = 'At Work';
-      } else if (hours >= 6 && hours < 8) {
-        statusText = 'Free Time';
-      } else if (hours >= 19 && hours < 24) {
-        statusText = 'Free Time';
+    try {
+      const token = await this.getDiscordToken();
+      
+      if (!token) {
+        return {
+          status: 'offline',
+          statusText: 'Offline',
+          timestamp: new Date().toISOString(),
+        };
       }
+      
+      try {
+        const activities = await this.getActivity();
+        let status = 'online';
+        let statusText = 'Online';
+        
+        if (activities && activities.length > 0) {
+          const activity = activities[0];
+          if (activity.type === 'PLAYING') {
+            statusText = `Playing ${activity.name}`;
+          } else if (activity.type === 'STREAMING') {
+            statusText = `Streaming ${activity.name}`;
+          } else if (activity.type === 'LISTENING') {
+            statusText = `Listening to ${activity.name}`;
+          } else if (activity.type === 'WATCHING') {
+            statusText = `Watching ${activity.name}`;
+          } else if (activity.type === 'CUSTOM') {
+            statusText = activity.state || 'Custom Status';
+          }
+        }
+        
+        return {
+          status,
+          statusText,
+          timestamp: new Date().toISOString(),
+        };
+      } catch (apiError) {
+        this.logger.error(`Discord API error: ${apiError.message}`);
+        return {
+          status: 'error',
+          statusText: 'Error fetching status',
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Error getting Discord presence: ${error.message}`);
+      return {
+        status: 'error',
+        statusText: 'Error fetching status',
+        timestamp: new Date().toISOString(),
+      };
     }
-    
-    // Override based on activities
-    if (activities.some(a => a.type === 'GAMING')) {
-      statusText = 'Gaming';
-    } else if (activities.some(a => a.type === 'PROGRAMMING')) {
-      statusText = 'Programming';
-    } else if (activities.some(a => a.type === 'IN_CALL')) {
-      statusText = 'With Friends';
-    } else if (status === 'idle') {
-      statusText = 'Out of Home';
-    } else if (activities.some(a => a.type === 'LISTENING') && !(hours >= 8 && hours < 18 && (day >= 1 && day <= 5))) {
-      statusText = 'Vibing';
-    }
-    
-    return {
-      status,
-      statusText,
-      timestamp: currentTime.toISOString(),
-    };
   }
 
   async getActivity() {
-    // In a real implementation, this would connect to Discord's API
-    // For this demo, we'll simulate the activity data
-    const currentTime = new Date();
-    const hours = currentTime.getHours();
-    const activities: Array<{
-      type: string;
-      name: string;
-      details: string;
-      state: string;
-      timestamps: {
-        start: number;
-      };
-    }> = [];
-    
-    // Simulate different activities based on time of day
-    if (hours >= 20 && hours < 23) {
-      activities.push({
-        type: 'GAMING',
-        name: 'Valorant',
-        details: 'Competitive Match',
-        state: 'In Game',
-        timestamps: {
-          start: Date.now() - 1800000, // 30 minutes ago
-        },
-      });
-    } else if (hours >= 9 && hours < 18) {
-      activities.push({
-        type: 'PROGRAMMING',
-        name: 'Visual Studio Code',
-        details: 'Editing TypeScript',
-        state: 'Working on a project',
-        timestamps: {
-          start: Date.now() - 3600000, // 1 hour ago
-        },
-      });
-    } else if (hours >= 18 && hours < 20) {
-      activities.push({
-        type: 'LISTENING',
-        name: 'Spotify',
-        details: 'Listening to music',
-        state: 'Relaxing',
-        timestamps: {
-          start: Date.now() - 900000, // 15 minutes ago
-        },
-      });
+    try {
+      const token = await this.getDiscordToken();
+      
+      if (!token) {
+        return [];
+      }
+      
+      try {
+        const response = await firstValueFrom(
+          this.httpService.get('https://discord.com/api/v10/users/@me/activities', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        );
+        
+        if (response.data && Array.isArray(response.data)) {
+          return response.data.map(activity => ({
+            type: activity.type === 0 ? 'PLAYING' : 
+                  activity.type === 1 ? 'STREAMING' :
+                  activity.type === 2 ? 'LISTENING' :
+                  activity.type === 3 ? 'WATCHING' :
+                  activity.type === 4 ? 'CUSTOM' : 'UNKNOWN',
+            name: activity.name || '',
+            details: activity.details || '',
+            state: activity.state || '',
+            timestamps: activity.timestamps || { start: Date.now() },
+          }));
+        }
+        
+        return [];
+      } catch (apiError) {
+        this.logger.error(`Discord API error: ${apiError.message}`);
+        return [];
+      }
+    } catch (error) {
+      this.logger.error(`Error getting Discord activity: ${error.message}`);
+      return [];
     }
-    
-    return activities;
+  }
+  
+  private async getDiscordToken(): Promise<string | null> {
+    try {
+      if (!this.clientId || !this.clientSecret) {
+        return null;
+      }
+      
+      // This would be replaced with actual token retrieval logic
+      // when Discord OAuth flow is implemented
+      return null;
+    } catch (error) {
+      this.logger.error(`Error retrieving Discord token: ${error.message}`);
+      return null;
+    }
   }
 }
