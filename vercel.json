@@ -6,13 +6,7 @@
       "use": "@vercel/node"
     }
   ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/backend/docs",
-      "permanent": false
-    }
-  ],
+
   "routes": [
     {
       "src": "/(.*)",
