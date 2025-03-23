@@ -9,6 +9,7 @@ import { WeatherModule } from './api/weather/weather.module';
 import { TokenRefreshService } from './api/spotify/token-refresh.service';
 import { TokenStorageService } from './api/spotify/token-storage.service';
 import { ServerlessTokenStorageService } from './api/spotify/serverless-token-storage.service';
+import { FileTokenStorageService } from './api/spotify/file-token-storage.service';
 
 @Module({
   imports: [
@@ -28,11 +29,13 @@ import { ServerlessTokenStorageService } from './api/spotify/serverless-token-st
     TokenRefreshService,
     TokenStorageService,
     ServerlessTokenStorageService,
+    FileTokenStorageService,
   ],
   exports: [
     TokenRefreshService,
     TokenStorageService,
     ServerlessTokenStorageService,
+    FileTokenStorageService,
   ],
 })
 export class AppModule {}

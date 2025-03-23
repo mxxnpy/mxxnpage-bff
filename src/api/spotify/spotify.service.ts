@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { TokenStorageService } from './token-storage.service';
+import { FileTokenStorageService } from './file-token-storage.service';
 import { firstValueFrom } from 'rxjs';
 import { URLSearchParams } from 'url';
 
@@ -14,15 +15,19 @@ export class SpotifyService {
   private readonly authUrl = 'https://accounts.spotify.com/authorize';
   private readonly tokenUrl = 'https://accounts.spotify.com/api/token';
 
+  private readonly logger = new Logger(SpotifyService.name);
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-    private readonly tokenStorageService: TokenStorageService,
+    private readonly tokenStorageService?: TokenStorageService,
+    private readonly fileTokenStorageService?: FileTokenStorageService,
   ) {
     try {
-      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
+      // Hardcoded client ID for testing - replace with your actual client ID in production
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '1e6c0d00a7a34f1c9d0d043d2b8e6e0e';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
-      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/simple-callback';
       
       if (this.configService) {
         const configClientId = this.configService.get<string>('SPOTIFY_CLIENT_ID');
@@ -34,14 +39,20 @@ export class SpotifyService {
         if (configRedirectUri) this.redirectUri = configRedirectUri;
       }
       
+      console.log('SpotifyService initialized with:', {
+        clientIdSet: !!this.clientId,
+        clientSecretSet: !!this.clientSecret,
+        redirectUri: this.redirectUri
+      });
+      
       if (!this.clientId || !this.clientSecret) {
         console.warn('Spotify credentials missing. Some Spotify API features may not work correctly.');
       }
     } catch (error) {
       console.error(`Error initializing SpotifyService: ${error.message}`);
-      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '1e6c0d00a7a34f1c9d0d043d2b8e6e0e';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
-      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/simple-callback';
     }
   }
 
@@ -110,6 +121,37 @@ export class SpotifyService {
       throw error;
     }
   }
+  
+  async getClientCredentialsToken(): Promise<any> {
+    const params = new URLSearchParams({
+      grant_type: 'client_credentials',
+    });
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(
+          `${this.clientId}:${this.clientSecret}`,
+        ).toString('base64')}`,
+      },
+    };
+
+    try {
+      console.log('Requesting client credentials token with client ID:', this.clientId);
+      const response = await firstValueFrom(
+        this.httpService.post(this.tokenUrl, params.toString(), config),
+      );
+      
+      // Add expires_at field for easier expiration checking
+      const data = response.data;
+      data.expires_at = Date.now() + (data.expires_in * 1000);
+      
+      return data;
+    } catch (error) {
+      console.error('Error getting client credentials token:', error.response?.data || error.message);
+      throw error;
+    }
+  }
 
   async getCurrentTrack(): Promise<any> {
     try {
@@ -175,8 +217,37 @@ export class SpotifyService {
     params: Record<string, any> = {},
   ): Promise<any> {
     try {
-      // Get tokens from storage
-      const tokens = this.tokenStorageService.getTokens();
+      // Get tokens from storage service or environment variable
+      let tokens = null;
+      
+      // First try to use file-based token storage (preferred method)
+      if (this.fileTokenStorageService) {
+        tokens = await this.fileTokenStorageService.getTokens();
+        if (tokens) {
+          this.logger.debug(`Using tokens from file storage service for endpoint: ${endpoint}`);
+        }
+      }
+      
+      // If no tokens from file storage, try standard storage
+      if (!tokens && this.tokenStorageService) {
+        tokens = this.tokenStorageService.getTokens();
+        if (tokens) {
+          this.logger.debug(`Using tokens from standard storage service for endpoint: ${endpoint}`);
+        }
+      }
+      
+      // Last resort: try environment variables
+      if (!tokens) {
+        const tokenData = process.env.SPOTIFY_TOKEN_DATA;
+        if (tokenData) {
+          try {
+            tokens = JSON.parse(tokenData);
+            this.logger.debug(`Using tokens from environment variable for endpoint: ${endpoint}`);
+          } catch (parseError) {
+            this.logger.error(`Failed to parse token data from environment: ${parseError.message}`);
+          }
+        }
+      }
 
       if (!tokens || !tokens.access_token) {
         console.warn(`No access token available for endpoint: ${endpoint}`);
@@ -186,20 +257,35 @@ export class SpotifyService {
       // Check if token is expired and refresh if needed
       if (tokens.expires_at && Date.now() > tokens.expires_at) {
         if (!tokens.refresh_token) {
-          console.warn('Token expired and no refresh token available');
+          this.logger.warn('Token expired and no refresh token available');
           return this.getEmptyResponseForEndpoint(endpoint);
         }
 
         try {
-          console.log('Token expired, refreshing before request');
+          this.logger.log('Token expired, refreshing before request');
           const refreshedTokens = await this.refreshAccessToken(tokens.refresh_token);
-          await this.tokenStorageService.updateTokens(refreshedTokens);
+          
+          // Update tokens in file storage first (preferred method)
+          if (this.fileTokenStorageService) {
+            await this.fileTokenStorageService.updateTokens(refreshedTokens);
+            this.logger.log('Updated tokens in file storage after refresh');
+          } else if (this.tokenStorageService) {
+            await this.tokenStorageService.updateTokens(refreshedTokens);
+            this.logger.log('Updated tokens in standard storage after refresh');
+          } else {
+            // Fallback to environment variable
+            process.env.SPOTIFY_TOKEN_DATA = JSON.stringify({
+              ...refreshedTokens,
+              expires_at: Date.now() + (refreshedTokens.expires_in * 1000)
+            });
+            this.logger.log('Updated tokens in environment variable after refresh');
+          }
           
           // Update tokens reference with refreshed tokens
           tokens.access_token = refreshedTokens.access_token;
           tokens.expires_at = Date.now() + (refreshedTokens.expires_in * 1000);
         } catch (refreshError) {
-          console.error(`Error pre-emptively refreshing token: ${refreshError.message}`);
+          this.logger.error(`Error pre-emptively refreshing token: ${refreshError.message}`);
           // Continue with existing token and let the request potentially fail
         }
       }
@@ -228,9 +314,24 @@ export class SpotifyService {
         // If token is expired, try to refresh and retry once
         if (apiError.response?.status === 401 && tokens.refresh_token) {
           try {
-            console.log('Token rejected (401), attempting refresh and retry');
+            this.logger.log('Token rejected (401), attempting refresh and retry');
             const refreshedTokens = await this.refreshAccessToken(tokens.refresh_token);
-            await this.tokenStorageService.updateTokens(refreshedTokens);
+            
+            // Update tokens in file storage first (preferred method)
+            if (this.fileTokenStorageService) {
+              await this.fileTokenStorageService.updateTokens(refreshedTokens);
+              this.logger.log('Updated tokens in file storage after 401 error');
+            } else if (this.tokenStorageService) {
+              await this.tokenStorageService.updateTokens(refreshedTokens);
+              this.logger.log('Updated tokens in standard storage after 401 error');
+            } else {
+              // Fallback to environment variable
+              process.env.SPOTIFY_TOKEN_DATA = JSON.stringify({
+                ...refreshedTokens,
+                expires_at: Date.now() + (refreshedTokens.expires_in * 1000)
+              });
+              this.logger.log('Updated tokens in environment variable after 401 error');
+            }
             
             // Retry the request with new token
             const retryResponse = await firstValueFrom(
@@ -243,7 +344,7 @@ export class SpotifyService {
             
             return retryResponse.data;
           } catch (refreshError) {
-            console.error(`Error refreshing token: ${refreshError.message}`);
+            this.logger.error(`Error refreshing token: ${refreshError.message}`);
             return this.getEmptyResponseForEndpoint(endpoint);
           }
         }

@@ -8,12 +8,20 @@
     {
       "src": "api/spotify-callback.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/simple-callback.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/backend/spotify/auth/callback",
       "dest": "api/spotify-callback.ts"
+    },
+    {
+      "src": "/backend/spotify/auth/simple-callback",
+      "dest": "api/simple-callback.ts"
     },
     {
       "src": "/backend/(.*)",
@@ -38,9 +46,6 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "SPOTIFY_REDIRECT_URI": "https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback",
-    "SPOTIFY_CLIENT_ID": "${SPOTIFY_CLIENT_ID}",
-    "SPOTIFY_CLIENT_SECRET": "${SPOTIFY_CLIENT_SECRET}",
-    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+    "SPOTIFY_REDIRECT_URI": "https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback"
   }
 }
