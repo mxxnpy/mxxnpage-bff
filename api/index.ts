@@ -2,27 +2,38 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 import express from 'express';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+const cookieParser = require('cookie-parser');
+import { SwaggerBuilder } from '../src/config/swagger.config';
 
+// Create Express instance
 const server = express();
 
+let app;
+
 async function bootstrap() {
-  const app = await NestFactory.create(
+  console.log('Bootstrapping NestJS application for Vercel serverless function');
+  
+  // Create NestJS app with Express adapter
+  app = await NestFactory.create(
     AppModule,
     new ExpressAdapter(server),
     {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     },
   );
-
-  app.setGlobalPrefix('backend'); // Restore prefix for proper routing
   
-  // Configure CORS for Vercel deployment
+  // Enable CORS for GitHub Pages, Vercel and local development
   app.enableCors({
     origin: [
       'https://mxxnpy.github.io',
+      'https://mxxnpy.github.io/mxxnpage/#/home',
+      'https://mxxnpy.github.io/mxxnpage/#/home/',
+      'https://mxxnpy.github.io/mxxnpage/#/spotify',
+      'https://mxxnpy.github.io/mxxnpage/#/project',
+      'https://mxxnpy.github.io/mxxnpage/#/',
       'https://mxxnpy.github.io/mxxnpage',
-      'https://mxxnpy.github.io/mxxnpage/',
+      'https://mxxnpy.github.io/mxxnpage/', 
       'https://mxxnpy.github.io/mxxnpage/browser',
       'https://mxxnpy.github.io/mxxnpage/browser/',
       'https://mxxnpage-bff.vercel.app',
@@ -32,37 +43,59 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: ['Content-Type', 'Authorization']
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
-  
-  // Configure Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Personal Status Dashboard API')
-    .setDescription('API for the personal status dashboard')
-    .setVersion('1.0')
-    .addServer('https://mxxnpage-bff.vercel.app', 'production')
-    .addServer('https://mxxnpage-bff.vercel.app/backend', 'production with prefix')
-    .addServer('https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app', 'production custom domain')
-    .addServer('https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app/backend', 'production custom domain with prefix')
-    .build();
-  
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('backend/docs', app, document);
+
+  // Use cookie parser
+  app.use(cookieParser());
+
+  // Set global prefix for all routes
+  app.setGlobalPrefix('backend');
+
+  // Enable validation pipes
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }));
+
+  // Setup Scalar UI API documentation with dark theme
+  await new SwaggerBuilder(app)
+    .config('Personal Status Dashboard API')
+    .build('moon');
 
   await app.init();
+  console.log('NestJS application initialized successfully');
+  
   return app;
 }
 
-let cachedApp: any;
-
-export default async function handler(req: any, res: any) {
-  if (!cachedApp) {
-    cachedApp = await bootstrap();
+// Handler for Vercel serverless function
+export default async function handler(req, res) {
+  try {
+    // Initialize app if not already initialized
+    if (!app) {
+      console.log('First request - initializing NestJS application');
+      await bootstrap();
+    }
+    
+    // Log request for debugging
+    console.log(`Handling request: ${req.method} ${req.url}`);
+    
+    // Special handling for root path - redirect to /backend/docs
+    if (req.url === '/' || req.url === '') {
+      console.log('Redirecting root path to /backend/docs');
+      res.writeHead(302, { Location: '/backend/docs' });
+      res.end();
+      return;
+    }
+    
+    // Handle the request with the Express server
+    server(req, res);
+  } catch (error) {
+    console.error('Error handling request:', error);
+    res.status(500).send('Internal Server Error');
   }
-  
-  // Log request for debugging
-  console.log(`Handling request: ${req.method} ${req.url}`);
-  
-  // Pass the request to the NestJS app
-  server(req, res);
 }
