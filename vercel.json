@@ -9,8 +9,7 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/backend/docs",
-      "status": 302
+      "dest": "/backend/docs"
     },
     {
       "src": "/backend/(.*)",
