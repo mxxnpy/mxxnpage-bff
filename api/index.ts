@@ -15,7 +15,7 @@ async function bootstrap() {
     },
   );
 
-  app.setGlobalPrefix('backend');
+  // app.setGlobalPrefix('backend'); // Prefix is handled by vercel.json routing
   
   // Configure CORS for Vercel deployment
   app.enableCors({
