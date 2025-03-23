@@ -1,222 +1,193 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { catchError, firstValueFrom, map, of } from 'rxjs';
-import { AxiosError } from 'axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class GithubService {
-  private readonly logger = new Logger(GithubService.name);
-  private readonly apiUrl: string;
-  private readonly token: string;
+export class DiscordService {
+  // Note: Real Discord API integration requires user authentication
+  // This implementation returns default data when no authentication is present
+  // To get real data, implement OAuth 2.0 flow and store user tokens
+  private readonly logger = new Logger(DiscordService.name);
+  private readonly clientId: string;
+  private readonly clientSecret: string;
+  private readonly redirectUri: string;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
     try {
-      this.apiUrl = 'https://api.github.com';
-      this.token = process.env.GITHUB_TOKEN || '';
+      this.clientId = process.env.DISCORD_CLIENT_ID || '';
+      this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/discord/auth/callback';
       
       if (this.configService) {
-        this.apiUrl = this.configService.get<string>('GITHUB_API_URL', 'https://api.github.com');
-        const configToken = this.configService.get<string>('GITHUB_TOKEN');
-        if (configToken) {
-          this.token = configToken;
-        }
+        const configClientId = this.configService.get<string>('DISCORD_CLIENT_ID');
+        const configClientSecret = this.configService.get<string>('DISCORD_CLIENT_SECRET');
+        const configRedirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
+        
+        if (configClientId) this.clientId = configClientId;
+        if (configClientSecret) this.clientSecret = configClientSecret;
+        if (configRedirectUri) this.redirectUri = configRedirectUri;
       }
       
-      if (!this.token) {
-        this.logger.warn('GITHUB_TOKEN is not set. GitHub API requests may be rate-limited.');
+      if (!this.clientId || !this.clientSecret) {
+        this.logger.warn('Discord credentials missing. Some Discord API features may not work correctly.');
       }
     } catch (error) {
-      this.logger.error(`Error initializing GithubService: ${error.message}`);
-      this.apiUrl = 'https://api.github.com';
-      this.token = process.env.GITHUB_TOKEN || '';
+      this.logger.error(`Error initializing DiscordService: ${error.message}`);
+      this.clientId = process.env.DISCORD_CLIENT_ID || '';
+      this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/discord/auth/callback';
     }
   }
 
-  async getUserProfile(username: string) {
+  // Note: Real Discord API integration requires user authentication
+  // This implementation returns default data when no authentication is present
+  // To get real data, implement OAuth 2.0 flow and store user tokens
+  
+  async getPresence() {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.get(`${this.apiUrl}/users/${username}`, {
-          headers: this.getHeaders(),
-        }).pipe(
-          catchError((error: AxiosError) => {
-            this.logger.error(`Failed to fetch GitHub user profile: ${error.message}`);
-            throw new Error(`Failed to fetch GitHub user profile: ${error.message}`);
-          }),
-        ),
-      );
-      return data;
-    } catch (error) {
-      this.logger.error(`Error fetching GitHub user profile: ${error.message}`);
-      throw error;
-    }
-  }
-
-  async getUserActivity(username: string) {
-    try {
-      const { data } = await firstValueFrom(
-        this.httpService.get(`${this.apiUrl}/users/${username}/events`, {
-          headers: this.getHeaders(),
-          params: {
-            per_page: 10,
-          },
-        }).pipe(
-          catchError((error: AxiosError) => {
-            this.logger.error(`Failed to fetch GitHub user activity: ${error.message}`);
-            throw new Error(`Failed to fetch GitHub user activity: ${error.message}`);
-          }),
-        ),
-      );
-      return data;
-    } catch (error) {
-      this.logger.error(`Error fetching GitHub user activity: ${error.message}`);
-      throw error;
-    }
-  }
-
-  async getUserContributions(username: string) {
-    try {
-      // Using GitHub GraphQL API to fetch actual contributions data
-      const query = `
-        query($username: String!) {
-          user(login: $username) {
-            name
-            contributionsCollection {
-              contributionCalendar {
-                totalContributions
-                weeks {
-                  contributionDays {
-                    date
-                    contributionCount
-                  }
-                }
-              }
-            }
-          }
-        }
-      `;
+      if (!this.clientId || !this.clientSecret) {
+        return this.getDefaultPresence();
+      }
       
-      const variables = { username };
+      // Make API request to Discord for presence data
+      const token = await this.getDiscordToken();
       
-      // Check if token is available
-      if (!this.token) {
-        this.logger.warn('No GitHub token available. Returning default contribution data.');
-        return this.getDefaultContributions(username);
+      if (!token) {
+        this.logger.warn('No Discord token available, returning default presence');
+        return this.getDefaultPresence();
       }
       
       try {
-        const { data } = await firstValueFrom(
-          this.httpService.post('https://api.github.com/graphql', {
-            query,
-            variables
-          }, {
-            headers: {
-              'Authorization': `bearer ${this.token}`,
-              'Content-Type': 'application/json'
-            }
-          }).pipe(
-            catchError((error: AxiosError) => {
-              this.logger.error(`Failed to fetch GitHub contributions via GraphQL: ${error.message}`);
-              throw new Error(`Failed to fetch GitHub contributions: ${error.message}`);
-            }),
-          ),
-        );
+        // Get activity data from real API
+        const activities = await this.getActivity();
         
-        // Extract contributions data from GraphQL response
-        const contributionCalendar = data?.data?.user?.contributionsCollection?.contributionCalendar;
-        if (!contributionCalendar) {
-          this.logger.warn('Invalid GraphQL response from GitHub API. Returning default data.');
-          return this.getDefaultContributions(username);
+        // Determine status based on activities
+        let status = 'online';
+        let statusText = 'Online';
+        
+        // Override based on activities
+        if (activities.some(a => a.type === 'PLAYING' || a.type === 'GAMING')) {
+          statusText = 'Gaming';
+        } else if (activities.some(a => a.type === 'STREAMING')) {
+          statusText = 'Streaming';
+        } else if (activities.some(a => a.type === 'LISTENING')) {
+          statusText = 'Listening to Music';
+        } else if (activities.some(a => a.type === 'WATCHING')) {
+          statusText = 'Watching Content';
+        } else if (activities.some(a => a.type === 'CUSTOM')) {
+          const customActivity = activities.find(a => a.type === 'CUSTOM');
+          statusText = customActivity.state || 'Custom Status';
         }
         
-        // Format the contributions data
-        const contributions = [];
-        contributionCalendar.weeks.forEach(week => {
-          week.contributionDays.forEach(day => {
-            contributions.push({
-              date: day.date,
-              count: day.contributionCount
-            });
-          });
-        });
-        
-        // Get user's repositories
-        const { data: repos } = await firstValueFrom(
-          this.httpService.get(`${this.apiUrl}/users/${username}/repos`, {
-            headers: this.getHeaders(),
-            params: {
-              per_page: 5,
-              sort: 'updated',
-            },
-          }).pipe(
-            catchError((error: AxiosError) => {
-              this.logger.error(`Failed to fetch GitHub user repos: ${error.message}`);
-              // Return an observable with empty data array
-              return of({ data: [] });
-            }),
-          ),
-        );
-        
         return {
-          username,
-          totalContributions: contributionCalendar.totalContributions,
-          contributions,
-          recentRepositories: Array.isArray(repos) ? repos.map(repo => ({
-            name: repo.name,
-            url: repo.html_url,
-            description: repo.description,
-            stars: repo.stargazers_count,
-            forks: repo.forks_count,
-            language: repo.language,
-          })) : [],
+          status,
+          statusText,
+          timestamp: new Date().toISOString(),
         };
-      } catch (graphqlError) {
-        this.logger.error(`GraphQL API error: ${graphqlError.message}`);
-        return this.getDefaultContributions(username);
+      } catch (apiError) {
+        this.logger.error(`Discord API error: ${apiError.message}`);
+        return this.getDefaultPresence();
       }
     } catch (error) {
-      this.logger.error(`Error fetching GitHub user contributions: ${error.message}`);
-      return this.getDefaultContributions(username);
+      this.logger.error(`Error getting Discord presence: ${error.message}`);
+      return this.getDefaultPresence();
     }
   }
   
-  private getDefaultContributions(username: string) {
-    // Create a default response with empty data
-    const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
-    // Create empty contributions for the past year
-    const contributions = [];
-    for (let d = new Date(oneYearAgo); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateString = d.toISOString().split('T')[0];
-      contributions.push({
-        date: dateString,
-        count: 0
-      });
-    }
-    
+  private getDefaultPresence() {
     return {
-      username,
-      totalContributions: 0,
-      contributions,
-      recentRepositories: [],
-      error: "Authentication required. Please provide a GitHub token."
+      status: 'offline',
+      statusText: 'Offline or Unavailable',
+      timestamp: new Date().toISOString(),
+      error: 'Discord authentication required',
     };
   }
 
-  private getHeaders() {
-    const headers: Record<string, string> = {
-      'Accept': 'application/vnd.github.v3+json',
-    };
-    
-    if (this.token) {
-      headers['Authorization'] = `token ${this.token}`;
+  async getActivity() {
+    try {
+      if (!this.clientId || !this.clientSecret) {
+        return this.getDefaultActivity();
+      }
+      
+      const token = await this.getDiscordToken();
+      
+      if (!token) {
+        this.logger.warn('No Discord token available, returning default activity');
+        return this.getDefaultActivity();
+      }
+      
+      try {
+        // Make request to Discord API for user activities
+        const response = await firstValueFrom(
+          this.httpService.get('https://discord.com/api/v10/users/@me/activities', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        );
+        
+        // Map response to our activity format
+        if (response.data && Array.isArray(response.data)) {
+          return response.data.map(activity => ({
+            type: activity.type === 0 ? 'PLAYING' : 
+                  activity.type === 1 ? 'STREAMING' :
+                  activity.type === 2 ? 'LISTENING' :
+                  activity.type === 3 ? 'WATCHING' :
+                  activity.type === 4 ? 'CUSTOM' : 'UNKNOWN',
+            name: activity.name || 'Unknown Activity',
+            details: activity.details || '',
+            state: activity.state || '',
+            timestamps: activity.timestamps || { start: Date.now() },
+          }));
+        }
+        
+        return this.getDefaultActivity();
+      } catch (apiError) {
+        this.logger.error(`Discord API error: ${apiError.message}`);
+        return this.getDefaultActivity();
+      }
+    } catch (error) {
+      this.logger.error(`Error getting Discord activity: ${error.message}`);
+      return this.getDefaultActivity();
     }
-    
-    return headers;
+  }
+  
+  private getDefaultActivity() {
+    return [{
+      type: 'UNKNOWN',
+      name: 'No activity data available',
+      details: 'Authentication required',
+      state: 'Please connect Discord account',
+      timestamps: {
+        start: Date.now(),
+      },
+    }];
+  }
+  
+  private async getDiscordToken(): Promise<string | null> {
+    try {
+      if (!this.clientId || !this.clientSecret) {
+        return null;
+      }
+      
+      // In a real implementation, you would retrieve the stored token
+      // or exchange a code for a token if you have an auth flow
+      
+      // Since we don't have user authentication flow yet,
+      // return null to indicate we don't have a token
+      return null;
+      
+      // When implementing OAuth, you would:
+      // 1. Store the tokens securely (similar to SpotifyTokenStorageService)
+      // 2. Implement refresh token mechanism
+      // 3. Return the access token here
+    } catch (error) {
+      this.logger.error(`Error retrieving Discord token: ${error.message}`);
+      return null;
+    }
   }
 }

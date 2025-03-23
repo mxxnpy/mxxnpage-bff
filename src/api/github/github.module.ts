@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { GithubController } from './github.controller';
-import { GithubService } from './github.service';
+import { DiscordController } from './discord.controller';
+import { DiscordService } from './discord.service';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [HttpModule],
-  controllers: [GithubController],
-  providers: [GithubService],
-  exports: [GithubService],
+  controllers: [DiscordController],
+  providers: [DiscordService],
+  exports: [DiscordService],
 })
-export class GithubModule {}
+export class DiscordModule {}

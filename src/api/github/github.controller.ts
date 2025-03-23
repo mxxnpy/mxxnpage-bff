@@ -1,49 +1,29 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { GithubService } from './github.service';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get } from '@nestjs/common';
+import { DiscordService } from './discord.service';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('github')
-@Controller('github')
-export class GithubController {
-  constructor(private readonly githubService: GithubService) {}
+@ApiTags('discord')
+@Controller('discord')
+export class DiscordController {
+  constructor(private readonly discordService: DiscordService) {}
 
-  @Get('user/:username')
-  @ApiOperation({ summary: 'Get GitHub user profile' })
-  @ApiParam({ name: 'username', description: 'GitHub username' })
-  @ApiResponse({ status: 200, description: 'Returns GitHub user profile information' })
-  async getUserProfile(@Param('username') username: string) {
-    return this.githubService.getUserProfile(username);
+  @Get('presence')
+  @ApiOperation({ summary: 'Get Discord presence' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns Discord presence information',
+  })
+  async getPresence() {
+    return this.discordService.getPresence();
   }
 
-  @Get('activity/:username')
-  @ApiOperation({ summary: 'Get GitHub user activity' })
-  @ApiParam({ name: 'username', description: 'GitHub username' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of activities to return' })
-  @ApiResponse({ status: 200, description: 'Returns GitHub user activity' })
-  async getUserActivity(
-    @Param('username') username: string,
-    @Query('limit') limit: number = 10,
-  ) {
-    return this.githubService.getUserActivity(username);
-  }
-
-  @Get('contributions/:username')
-  @ApiOperation({ summary: 'Get GitHub user contributions' })
-  @ApiParam({ name: 'username', description: 'GitHub username' })
-  @ApiResponse({ status: 200, description: 'Returns GitHub user contributions' })
-  async getUserContributions(@Param('username') username: string) {
-    try {
-      return await this.githubService.getUserContributions(username);
-    } catch (error) {
-      console.error(`Error fetching GitHub contributions for ${username}: ${error.message}`);
-      // Return a structured error response
-      return {
-        error: true,
-        message: 'Failed to fetch GitHub contributions',
-        username,
-        totalContributions: 0,
-        contributions: []
-      };
-    }
+  @Get('activity')
+  @ApiOperation({ summary: 'Get Discord activity' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns Discord activity information',
+  })
+  async getActivity() {
+    return this.discordService.getActivity();
   }
 }
