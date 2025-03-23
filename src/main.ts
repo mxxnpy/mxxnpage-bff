@@ -7,7 +7,7 @@ import { SwaggerBuilder } from './config/swagger.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Enable CORS for GitHub Pages and local development
+  // Enable CORS for GitHub Pages, Vercel and local development
   app.enableCors({
     origin: [
       'https://mxxnpy.github.io',
@@ -20,8 +20,10 @@ async function bootstrap() {
       'https://mxxnpy.github.io/mxxnpage/', 
       'https://mxxnpy.github.io/mxxnpage/browser',
       'https://mxxnpy.github.io/mxxnpage/browser/',
-      'https://mxxnbff.netlify.app',
-      'https://mxxnbff.netlify.app/'
+      'https://mxxnpage-bff.vercel.app',
+      'https://mxxnpage-bff.vercel.app/',
+      'https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app',
+      'https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app/'
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -51,6 +53,6 @@ async function bootstrap() {
   // Forçar o uso de IPv4 e desabilitar IPv6
   const server = await app.listen(process.env.PORT || 3000, '0.0.0.0');
   server.address = () => ({ address: '0.0.0.0', family: 'IPv4', port: process.env.PORT || 3000 });
-  console.log(`Application is running on: https://mxxnbff.netlify.app`);
+  console.log(`Application is running on: ${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`}`);
 }
 bootstrap();

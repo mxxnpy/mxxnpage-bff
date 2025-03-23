@@ -22,7 +22,7 @@ export class SpotifyService {
     try {
       this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
-      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/spotify/auth/callback';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback';
       
       if (this.configService) {
         const configClientId = this.configService.get<string>('SPOTIFY_CLIENT_ID');
@@ -41,7 +41,7 @@ export class SpotifyService {
       console.error(`Error initializing SpotifyService: ${error.message}`);
       this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
-      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/spotify/auth/callback';
+      this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/callback';
     }
   }
 

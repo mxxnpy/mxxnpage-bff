@@ -30,8 +30,10 @@ export class SwaggerBuilder {
     // Add server URLs
     const port = process.env.PORT || 3000;
     this.swaggerConfig.addServer(`http://localhost:${port}`, 'local');
-    this.swaggerConfig.addServer('https://mxxnbff.netlify.app', 'production');
-    this.swaggerConfig.addServer('https://mxxnbff.netlify.app/backend', 'production with prefix');    
+    this.swaggerConfig.addServer('https://mxxnpage-bff.vercel.app', 'production');
+    this.swaggerConfig.addServer('https://mxxnpage-bff.vercel.app/backend', 'production with prefix');
+    this.swaggerConfig.addServer('https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app', 'production custom domain');
+    this.swaggerConfig.addServer('https://mxxnpage-1n12pwxrl-mxxnpys-projects.vercel.app/backend', 'production custom domain with prefix');    
     return this;
   }
 

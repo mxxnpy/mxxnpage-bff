@@ -17,7 +17,7 @@ export class DiscordService {
     try {
       this.clientId = process.env.DISCORD_CLIENT_ID || '';
       this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
-      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/discord/auth/callback';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/discord/auth/callback';
       
       if (this.configService) {
         const configClientId = this.configService.get<string>('DISCORD_CLIENT_ID');
@@ -36,7 +36,7 @@ export class DiscordService {
       this.logger.error(`Error initializing DiscordService: ${error.message}`);
       this.clientId = process.env.DISCORD_CLIENT_ID || '';
       this.clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
-      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnbff.netlify.app/backend/discord/auth/callback';
+      this.redirectUri = process.env.DISCORD_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/discord/auth/callback';
     }
   }
 
