@@ -10,4 +10,3 @@ import { HttpModule } from '@nestjs/axios';
   exports: [DiscordService],
 })
 export class DiscordModule {}
-s
