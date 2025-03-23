@@ -7,6 +7,7 @@ import { SpotifyModule } from './api/spotify/spotify.module';
 import { DiscordModule } from './api/discord/discord.module';
 import { WeatherModule } from './api/weather/weather.module';
 import { TokenRefreshService } from './api/spotify/token-refresh.service';
+import { ServerlessTokenStorageService } from './api/spotify/serverless-token-storage.service';
 
 @Module({
   imports: [
@@ -24,9 +25,11 @@ import { TokenRefreshService } from './api/spotify/token-refresh.service';
   ],
   providers: [
     TokenRefreshService,
+    ServerlessTokenStorageService,
   ],
   exports: [
     TokenRefreshService,
+    ServerlessTokenStorageService,
   ],
 })
 export class AppModule {}
