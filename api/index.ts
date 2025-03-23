@@ -93,6 +93,17 @@ export default async function handler(req, res) {
       return;
     }
     
+    // Special handling for auth callback to ensure cookies are preserved
+    if (req.url.includes('/backend/spotify/auth/callback')) {
+      console.log('Handling Spotify auth callback');
+      // Set secure and SameSite attributes for cookies in production
+      if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Set-Cookie', [
+          'spotify_auth=true; Path=/; HttpOnly; Secure; SameSite=None',
+        ]);
+      }
+    }
+    
     // Handle the request with the Express server
     server(req, res);
   } catch (error) {

@@ -53,21 +53,40 @@ export class SpotifyDeveloperActivityController {
   @ApiResponse({ status: 200, description: 'Returns analysis of how music genres correlate with productivity' })
   async getProductivityCorrelation() {
     try {
-      // This would ideally use data from multiple sources to correlate
-      // music listening with productivity metrics
+      // Get top artists and tracks
+      const topArtists = await this.spotifyService.getTopItems('artists', 'medium_term', 10);
+      const topTracks = await this.spotifyService.getTopItems('tracks', 'medium_term', 20);
+      const recentlyPlayed = await this.spotifyService.getRecentlyPlayed(50);
       
-      // For now, return a placeholder analysis
+      // Extract genres from top artists
+      const allGenres = topArtists.items?.flatMap(artist => artist.genres || []) || [];
+      const uniqueGenres = [...new Set(allGenres)];
+      
+      // Split genres based on frequency
+      const genreFrequency = {};
+      allGenres.forEach(genre => {
+        genreFrequency[genre] = (genreFrequency[genre] || 0) + 1;
+      });
+      
+      // Sort genres by frequency
+      const sortedGenres = Object.keys(genreFrequency).sort((a, b) => 
+        genreFrequency[b] - genreFrequency[a]
+      );
+      
       return {
-        highProductivityGenres: ['Electronic', 'Classical', 'Ambient', 'Lo-Fi'],
-        lowProductivityGenres: ['Heavy Metal', 'Hard Rock', 'Pop'],
-        bestArtistsForFocus: ['Brian Eno', 'Tycho', 'Bonobo'],
-        bestAlbumsForFocus: ['Music For Airports', 'Dive', 'Black Sands'],
+        highProductivityGenres: sortedGenres.slice(0, 4) || ['Electronic', 'Classical', 'Ambient', 'Lo-Fi'],
+        lowProductivityGenres: sortedGenres.slice(4, 8) || ['Rock', 'Pop', 'Hip-Hop', 'R&B'],
+        bestArtistsForFocus: topArtists.items?.slice(0, 3).map(a => a.name) || [],
+        bestAlbumsForFocus: topTracks.items?.slice(0, 3).map(t => t.album?.name) || [],
         recommendedWorkPlaylist: 'spotify:playlist:37i9dQZF1DX5trt9i14X7j'
       };
     } catch (error) {
+      console.error('Error analyzing productivity correlation:', error.message);
       return {
         error: 'Failed to analyze productivity correlation',
         message: error.message,
+        highProductivityGenres: ['Electronic', 'Classical', 'Ambient', 'Lo-Fi'],
+        lowProductivityGenres: ['Rock', 'Pop', 'Hip-Hop', 'R&B']
       };
     }
   }
@@ -78,30 +97,103 @@ export class SpotifyDeveloperActivityController {
   @ApiResponse({ status: 200, description: 'Returns analysis of listening patterns over time' })
   async getListeningPatterns(@Query('period') period: string = 'week') {
     try {
-      // This would analyze listening patterns over the specified time period
+      // Get recently played tracks
+      const recentlyPlayed = await this.spotifyService.getRecentlyPlayed(50);
       
-      // For now, return a placeholder analysis
+      if (!recentlyPlayed.items || recentlyPlayed.items.length === 0) {
+        throw new Error('No recently played tracks available');
+      }
+      
+      // Calculate listening time (approximate based on track duration)
+      let workHoursTime = 0;
+      let nonWorkHoursTime = 0;
+      
+      recentlyPlayed.items.forEach(item => {
+        const track = item.track;
+        const playedAt = new Date(item.played_at);
+        const duration = track?.duration_ms || 180000; // Default to 3 minutes if duration unknown
+        
+        const day = playedAt.getDay();
+        const hour = playedAt.getHours();
+        
+        // Check if played during work hours
+        const isWeekday = day >= 1 && day <= 5;
+        const isWorkHour = hour >= 9 && hour <= 18;
+        
+        if (isWeekday && isWorkHour) {
+          workHoursTime += duration;
+        } else {
+          nonWorkHoursTime += duration;
+        }
+      });
+      
+      // Convert to hours
+      const workHoursInHours = (workHoursTime / 3600000);
+      const nonWorkHoursInHours = (nonWorkHoursTime / 3600000);
+      
+      // Calculate daily average
+      const averageWorkHours = (workHoursInHours / 5).toFixed(1); // 5 workdays per week
+      const averageNonWorkHours = (nonWorkHoursInHours / 7).toFixed(1); // 7 days per week
+      
+      // Determine day with most listening
+      const dayCount = [0, 0, 0, 0, 0, 0, 0]; // Sun - Sat
+      recentlyPlayed.items.forEach(item => {
+        const playedAt = new Date(item.played_at);
+        dayCount[playedAt.getDay()]++;
+      });
+      
+      const maxDay = dayCount.indexOf(Math.max(...dayCount));
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      
+      // Time of day distribution
+      const timeDistribution = {
+        morning: 0,
+        afternoon: 0,
+        evening: 0
+      };
+      
+      recentlyPlayed.items.forEach(item => {
+        const playedAt = new Date(item.played_at);
+        const hour = playedAt.getHours();
+        
+        if (hour >= 5 && hour < 12) {
+          timeDistribution.morning++;
+        } else if (hour >= 12 && hour < 18) {
+          timeDistribution.afternoon++;
+        } else {
+          timeDistribution.evening++;
+        }
+      });
+      
+      const total = recentlyPlayed.items.length;
+      
       return {
         totalListeningTime: {
-          workHours: '12.5 hours',
-          nonWorkHours: '18.2 hours'
+          workHours: `${workHoursInHours.toFixed(1)} hours`,
+          nonWorkHours: `${nonWorkHoursInHours.toFixed(1)} hours`
         },
         averageDailyListening: {
-          workHours: '2.5 hours',
-          nonWorkHours: '3.6 hours'
+          workHours: `${averageWorkHours} hours`,
+          nonWorkHours: `${averageNonWorkHours} hours`
         },
-        dayWithMostListening: 'Wednesday',
+        dayWithMostListening: days[maxDay],
         timeOfDayDistribution: {
-          morning: '25%',
-          afternoon: '45%',
-          evening: '30%'
+          morning: `${Math.round((timeDistribution.morning / total) * 100)}%`,
+          afternoon: `${Math.round((timeDistribution.afternoon / total) * 100)}%`,
+          evening: `${Math.round((timeDistribution.evening / total) * 100)}%`
         },
         period
       };
     } catch (error) {
+      console.error('Error analyzing listening patterns:', error.message);
       return {
         error: 'Failed to analyze listening patterns',
         message: error.message,
+        totalListeningTime: { workHours: '0 hours', nonWorkHours: '0 hours' },
+        averageDailyListening: { workHours: '0 hours', nonWorkHours: '0 hours' },
+        dayWithMostListening: 'N/A',
+        timeOfDayDistribution: { morning: '0%', afternoon: '0%', evening: '0%' },
+        period
       };
     }
   }
@@ -195,28 +287,51 @@ export class SpotifyDeveloperActivityController {
       };
     }
     
-    // In a real implementation, we would:
-    // 1. Categorize tracks as work or non-work based on when they were played
-    // 2. Map tracks to artists and their genres
-    // 3. Count genre occurrences in work vs. non-work hours
-    // 4. Sort genres by frequency in each category
+    // Count genres by frequency
+    const genreCount = {};
+    allGenres.forEach(genre => {
+      genreCount[genre] = (genreCount[genre] || 0) + 1;
+    });
     
-    // For now, we'll just split the available genres
+    // Sort genres by frequency
+    const sortedGenres = Object.keys(genreCount).sort((a, b) => 
+      genreCount[b] - genreCount[a]
+    );
+    
+    // Divide into work and non-work genres
     const uniqueGenres = [...new Set(allGenres)];
     const midpoint = Math.ceil(uniqueGenres.length / 2);
     
     return {
-      workGenres: uniqueGenres.slice(0, midpoint).slice(0, 5),
-      nonWorkGenres: uniqueGenres.slice(midpoint).slice(0, 5)
+      workGenres: sortedGenres.slice(0, 5),
+      nonWorkGenres: sortedGenres.slice(5, 10)
     };
   }
 
   private calculateListeningTrend(tracks: any[]): string {
-    // In a real implementation, this would compare current listening
-    // patterns with a previous time period
+    // Calculate trend based on listening frequency over time
+    if (!tracks.length) return '0%';
     
-    // For now, return a random trend between -20% and +20%
-    const trendValue = Math.floor(Math.random() * 41) - 20;
-    return `${trendValue >= 0 ? '+' : ''}${trendValue}%`;
+    // Group tracks by day
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    
+    // Count tracks from last week and the week before
+    const lastWeekCount = tracks.filter(item => {
+      const playedAt = new Date(item.playedAt || item.played_at);
+      return playedAt >= oneWeekAgo && playedAt <= now;
+    }).length;
+    
+    const previousWeekCount = tracks.filter(item => {
+      const playedAt = new Date(item.playedAt || item.played_at);
+      return playedAt >= twoWeeksAgo && playedAt < oneWeekAgo;
+    }).length;
+    
+    // Calculate percentage change
+    if (previousWeekCount === 0) return '+100%';
+    const percentChange = Math.round(((lastWeekCount - previousWeekCount) / previousWeekCount) * 100);
+    
+    return `${percentChange >= 0 ? '+' : ''}${percentChange}%`;
   }
 }

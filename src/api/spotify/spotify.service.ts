@@ -113,7 +113,18 @@ export class SpotifyService {
 
   async getCurrentTrack(): Promise<any> {
     try {
-      return await this.makeApiRequest('/me/player/currently-playing');
+      const result = await this.makeApiRequest('/me/player/currently-playing');
+      
+      // If result is null or empty, provide a structured response
+      if (!result) {
+        return { 
+          is_playing: false,
+          item: null,
+          status: "No track currently playing or authentication required"
+        };
+      }
+      
+      return result;
     } catch (error) {
       console.error(`Error fetching current track: ${error.message}`);
       // Return a structured empty response instead of throwing
@@ -168,17 +179,29 @@ export class SpotifyService {
       const tokens = this.tokenStorageService.getTokens();
 
       if (!tokens || !tokens.access_token) {
-        throw new Error('No access token available');
+        console.warn(`No access token available for endpoint: ${endpoint}`);
+        return this.getEmptyResponseForEndpoint(endpoint);
       }
 
       // Check if token is expired and refresh if needed
       if (tokens.expires_at && Date.now() > tokens.expires_at) {
         if (!tokens.refresh_token) {
-          throw new Error('No refresh token available');
+          console.warn('Token expired and no refresh token available');
+          return this.getEmptyResponseForEndpoint(endpoint);
         }
 
-        const refreshedTokens = await this.refreshAccessToken(tokens.refresh_token);
-        this.tokenStorageService.updateTokens(refreshedTokens);
+        try {
+          console.log('Token expired, refreshing before request');
+          const refreshedTokens = await this.refreshAccessToken(tokens.refresh_token);
+          await this.tokenStorageService.updateTokens(refreshedTokens);
+          
+          // Update tokens reference with refreshed tokens
+          tokens.access_token = refreshedTokens.access_token;
+          tokens.expires_at = Date.now() + (refreshedTokens.expires_in * 1000);
+        } catch (refreshError) {
+          console.error(`Error pre-emptively refreshing token: ${refreshError.message}`);
+          // Continue with existing token and let the request potentially fail
+        }
       }
 
       // Build query string
@@ -191,46 +214,71 @@ export class SpotifyService {
       const url = `${this.apiBaseUrl}${endpoint}${queryString}`;
 
       // Make the API request
-      const response = await firstValueFrom(
-        this.httpService.get(url, {
-          headers: {
-            Authorization: `Bearer ${tokens.access_token}`,
-          },
-        }),
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error(`Spotify API error: ${error.message}`);
-      
-      // If token is expired, try to refresh and retry once
-      if (error.response?.status === 401) {
-        try {
-          const tokens = this.tokenStorageService.getTokens();
-          if (tokens && tokens.refresh_token) {
+      try {
+        const response = await firstValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              Authorization: `Bearer ${tokens.access_token}`,
+            },
+          }),
+        );
+        
+        return response.data;
+      } catch (apiError) {
+        // If token is expired, try to refresh and retry once
+        if (apiError.response?.status === 401 && tokens.refresh_token) {
+          try {
+            console.log('Token rejected (401), attempting refresh and retry');
             const refreshedTokens = await this.refreshAccessToken(tokens.refresh_token);
-            this.tokenStorageService.updateTokens(refreshedTokens);
+            await this.tokenStorageService.updateTokens(refreshedTokens);
             
             // Retry the request with new token
-            return this.makeApiRequest(endpoint, params);
+            const retryResponse = await firstValueFrom(
+              this.httpService.get(url, {
+                headers: {
+                  Authorization: `Bearer ${refreshedTokens.access_token}`,
+                },
+              }),
+            );
+            
+            return retryResponse.data;
+          } catch (refreshError) {
+            console.error(`Error refreshing token: ${refreshError.message}`);
+            return this.getEmptyResponseForEndpoint(endpoint);
           }
-        } catch (refreshError) {
-          console.error('Error refreshing token:', refreshError);
         }
+        
+        console.error(`Spotify API error for ${endpoint}: ${apiError.message}`);
+        return this.getEmptyResponseForEndpoint(endpoint);
       }
-      
-      // Return empty data structure based on endpoint
-      if (endpoint.includes('/top/')) {
-        return { items: [] };
-      } else if (endpoint.includes('/playlists')) {
-        return { items: [] };
-      } else if (endpoint.includes('/recently-played')) {
-        return { items: [] };
-      } else if (endpoint.includes('/currently-playing')) {
-        return null;
-      } else {
-        return {};
-      }
+    } catch (error) {
+      console.error(`Unexpected error in makeApiRequest: ${error.message}`);
+      return this.getEmptyResponseForEndpoint(endpoint);
+    }
+  }
+  
+  private getEmptyResponseForEndpoint(endpoint: string): any {
+    // Return appropriate empty data structure based on endpoint
+    if (endpoint.includes('/top/')) {
+      return { items: [] };
+    } else if (endpoint.includes('/playlists')) {
+      return { items: [] };
+    } else if (endpoint.includes('/recently-played')) {
+      return { items: [] };
+    } else if (endpoint.includes('/currently-playing')) {
+      return { 
+        is_playing: false,
+        item: null,
+        error: "Authentication required. Please authenticate with Spotify first."
+      };
+    } else if (endpoint === '/me') {
+      return { 
+        id: null,
+        display_name: null,
+        error: "Authentication required. Please authenticate with Spotify first."
+      };
+    } else {
+      return {};
     }
   }
 }

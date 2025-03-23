@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { ServerlessTokenStorageService } from './serverless-token-storage.service';
 
 interface SpotifyTokens {
   access_token: string;
@@ -17,6 +18,7 @@ export class TokenStorageService {
   private readonly tokenFilePath: string;
   private memoryTokens: SpotifyTokens | null = null;
   private isServerless: boolean;
+  private serverlessStorage: ServerlessTokenStorageService;
   
   constructor() {
     // Determine if we're running in a serverless environment
@@ -24,6 +26,11 @@ export class TokenStorageService {
     
     // Store tokens in a file within the project directory (for non-serverless environments)
     this.tokenFilePath = path.join(process.cwd(), 'spotify-tokens.json');
+    
+    // Initialize serverless storage for Vercel environments
+    if (this.isServerless) {
+      this.serverlessStorage = new ServerlessTokenStorageService();
+    }
     
     this.logger.log(`TokenStorageService initialized in ${this.isServerless ? 'serverless' : 'standard'} mode`);
   }
@@ -39,8 +46,11 @@ export class TokenStorageService {
       // Always store in memory
       this.memoryTokens = tokensWithExpiry;
       
-      // In non-serverless environments, also store to file
-      if (!this.isServerless) {
+      // In serverless environments, use serverless storage
+      if (this.isServerless) {
+        await this.serverlessStorage.storeTokens(tokensWithExpiry);
+      } else {
+        // In non-serverless environments, store to file
         try {
           await fs.writeFile(
             this.tokenFilePath,
@@ -66,8 +76,13 @@ export class TokenStorageService {
         return this.memoryTokens;
       }
       
-      // In serverless environments, we can only use memory storage
+      // In serverless environments, try to get from serverless storage
       if (this.isServerless) {
+        const tokens = this.serverlessStorage.getTokens();
+        if (tokens) {
+          this.memoryTokens = tokens; // Cache in memory
+          return tokens;
+        }
         return null;
       }
       
@@ -118,8 +133,11 @@ export class TokenStorageService {
       // Update memory storage
       this.memoryTokens = updatedTokens;
       
-      // In non-serverless environments, also update file
-      if (!this.isServerless) {
+      // In serverless environments, use serverless storage
+      if (this.isServerless) {
+        await this.serverlessStorage.updateTokens(updatedTokens);
+      } else {
+        // In non-serverless environments, also update file
         try {
           await fs.writeFile(
             this.tokenFilePath,
@@ -143,8 +161,11 @@ export class TokenStorageService {
       // Clear memory storage
       this.memoryTokens = null;
       
-      // In non-serverless environments, also clear file
-      if (!this.isServerless) {
+      // In serverless environments, use serverless storage
+      if (this.isServerless) {
+        await this.serverlessStorage.clearTokens();
+      } else {
+        // In non-serverless environments, also clear file
         try {
           // Check if file exists
           try {
