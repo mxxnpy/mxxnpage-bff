@@ -7,6 +7,7 @@ import { SpotifyModule } from './api/spotify/spotify.module';
 import { DiscordModule } from './api/discord/discord.module';
 import { WeatherModule } from './api/weather/weather.module';
 import { TokenRefreshService } from './api/spotify/token-refresh.service';
+import { TokenStorageService } from './api/spotify/token-storage.service';
 import { ServerlessTokenStorageService } from './api/spotify/serverless-token-storage.service';
 
 @Module({
@@ -25,10 +26,12 @@ import { ServerlessTokenStorageService } from './api/spotify/serverless-token-st
   ],
   providers: [
     TokenRefreshService,
+    TokenStorageService,
     ServerlessTokenStorageService,
   ],
   exports: [
     TokenRefreshService,
+    TokenStorageService,
     ServerlessTokenStorageService,
   ],
 })
