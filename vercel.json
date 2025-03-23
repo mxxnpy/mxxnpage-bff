@@ -8,6 +8,11 @@
   ],
   "routes": [
     {
+      "src": "/",
+      "status": 302,
+      "headers": { "Location": "/backend/docs" }
+    },
+    {
       "src": "/backend/(.*)",
       "dest": "api/index.ts"
     },

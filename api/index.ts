@@ -87,7 +87,8 @@ export default async function handler(req, res) {
     // Special handling for root path - redirect to /backend/docs
     if (req.url === '/' || req.url === '') {
       console.log('Redirecting root path to /backend/docs');
-      res.writeHead(302, { Location: '/backend/docs' });
+      res.statusCode = 302;
+      res.setHeader('Location', '/backend/docs');
       res.end();
       return;
     }
