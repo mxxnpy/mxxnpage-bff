@@ -2,6 +2,18 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { StatusService } from '../status/status.service';
+
+// Import Activity interface from StatusService
+interface Activity {
+  type: string;
+  name: string;
+  details?: string;
+  state?: string;
+  timestamps?: {
+    start: number;
+  };
+}
 
 @Injectable()
 export class DiscordService {
@@ -13,6 +25,7 @@ export class DiscordService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly statusService: StatusService,
   ) {
     try {
       this.clientId = process.env.DISCORD_CLIENT_ID || '';
@@ -42,98 +55,34 @@ export class DiscordService {
   
   async getPresence() {
     try {
-      const token = await this.getDiscordToken();
+      // Get status directly from StatusService
+      const currentStatus = this.statusService.getCurrentStatus();
       
-      if (!token) {
-        return {
-          status: 'offline',
-          statusText: 'Offline',
-          timestamp: new Date().toISOString(),
-        };
-      }
-      
-      try {
-        const activities = await this.getActivity();
-        let status = 'online';
-        let statusText = 'Online';
-        
-        if (activities && activities.length > 0) {
-          const activity = activities[0];
-          if (activity.type === 'PLAYING') {
-            statusText = `Playing ${activity.name}`;
-          } else if (activity.type === 'STREAMING') {
-            statusText = `Streaming ${activity.name}`;
-          } else if (activity.type === 'LISTENING') {
-            statusText = `Listening to ${activity.name}`;
-          } else if (activity.type === 'WATCHING') {
-            statusText = `Watching ${activity.name}`;
-          } else if (activity.type === 'CUSTOM') {
-            statusText = activity.state || 'Custom Status';
-          }
-        }
-        
-        return {
-          status,
-          statusText,
-          timestamp: new Date().toISOString(),
-        };
-      } catch (apiError) {
-        this.logger.error(`Discord API error: ${apiError.message}`);
-        return {
-          status: 'error',
-          statusText: 'Error fetching status',
-          timestamp: new Date().toISOString(),
-        };
-      }
+      return {
+        status: 'online',
+        statusText: currentStatus.status,
+        timestamp: currentStatus.timestamp,
+      };
     } catch (error) {
       this.logger.error(`Error getting Discord presence: ${error.message}`);
-      return {
-        status: 'error',
-        statusText: 'Error fetching status',
-        timestamp: new Date().toISOString(),
-      };
+      throw error;
     }
   }
 
-  async getActivity() {
+  async getActivity(): Promise<Activity[]> {
     try {
-      const token = await this.getDiscordToken();
+      // Get activities directly from StatusService
+      const activities = this.statusService.getCurrentActivities();
       
-      if (!token) {
-        return [];
+      if (!activities || activities.length === 0) {
+        this.logger.warn('No activities available from StatusService');
+        throw new Error('No activities available');
       }
       
-      try {
-        const response = await firstValueFrom(
-          this.httpService.get('https://discord.com/api/v10/users/@me/activities', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        );
-        
-        if (response.data && Array.isArray(response.data)) {
-          return response.data.map(activity => ({
-            type: activity.type === 0 ? 'PLAYING' : 
-                  activity.type === 1 ? 'STREAMING' :
-                  activity.type === 2 ? 'LISTENING' :
-                  activity.type === 3 ? 'WATCHING' :
-                  activity.type === 4 ? 'CUSTOM' : 'UNKNOWN',
-            name: activity.name || '',
-            details: activity.details || '',
-            state: activity.state || '',
-            timestamps: activity.timestamps || { start: Date.now() },
-          }));
-        }
-        
-        return [];
-      } catch (apiError) {
-        this.logger.error(`Discord API error: ${apiError.message}`);
-        return [];
-      }
+      return activities;
     } catch (error) {
       this.logger.error(`Error getting Discord activity: ${error.message}`);
-      return [];
+      throw error;
     }
   }
   
@@ -141,12 +90,15 @@ export class DiscordService {
     try {
       if (!this.clientId || !this.clientSecret) {
         this.logger.error('Discord client ID or secret not configured');
-        return null;
+        throw new Error('Discord client ID or secret not configured');
       }
       
+      // Discord API requires OAuth2 with authorization code flow for user data
+      // For this API endpoint, we'll use a direct API call approach
+      
+      // Try with client credentials
       try {
-        // Use client credentials flow to get a token
-        const response = await firstValueFrom(
+        const tokenResponse = await firstValueFrom(
           this.httpService.post('https://discord.com/api/v10/oauth2/token', 
             new URLSearchParams({
               client_id: this.clientId,
@@ -162,22 +114,20 @@ export class DiscordService {
           )
         );
         
-        if (response.data && response.data.access_token) {
-          this.logger.log('Successfully obtained Discord token');
-          return response.data.access_token;
+        if (tokenResponse.data && tokenResponse.data.access_token) {
+          this.logger.log('Successfully obtained Discord token with client credentials');
+          return tokenResponse.data.access_token;
+        } else {
+          this.logger.error('Discord token response did not contain access_token');
+          throw new Error('Discord token response did not contain access_token');
         }
-        
-        this.logger.warn('Discord token response did not contain access_token');
-        return null;
-      } catch (error) {
-        this.logger.error(`Discord token request error: ${error.message}`);
-        // For testing purposes, return a hardcoded token to ensure online status
-        // This is only used when the Discord API is unavailable
-        return "XtLMDCsAk2rwwdoeGlKJCFSVy8Ze5g";
+      } catch (tokenError) {
+        this.logger.error(`Discord token request error: ${tokenError.message}`);
+        throw tokenError;
       }
     } catch (error) {
       this.logger.error(`Error retrieving Discord token: ${error.message}`);
-      return null;
+      throw error;
     }
   }
 }

@@ -24,8 +24,8 @@ export class SpotifyService {
     private readonly fileTokenStorageService?: FileTokenStorageService,
   ) {
     try {
-      // Hardcoded client ID for testing - replace with your actual client ID in production
-      this.clientId = process.env.SPOTIFY_CLIENT_ID || '1e6c0d00a7a34f1c9d0d043d2b8e6e0e';
+      // Use environment variables for Spotify credentials
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
       this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/simple-callback';
       
@@ -50,7 +50,7 @@ export class SpotifyService {
       }
     } catch (error) {
       console.error(`Error initializing SpotifyService: ${error.message}`);
-      this.clientId = process.env.SPOTIFY_CLIENT_ID || '1e6c0d00a7a34f1c9d0d043d2b8e6e0e';
+      this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
       this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
       this.redirectUri = process.env.SPOTIFY_REDIRECT_URI || 'https://mxxnpage-bff.vercel.app/backend/spotify/auth/simple-callback';
     }

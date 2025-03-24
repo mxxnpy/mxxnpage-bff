@@ -3,9 +3,10 @@ import { DiscordController } from './discord.controller';
 import { DiscordService } from './discord.service';
 import { DiscordAuthController } from './auth.controller';
 import { HttpModule } from '@nestjs/axios';
+import { StatusModule } from '../status/status.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, StatusModule],
   controllers: [DiscordController, DiscordAuthController],
   providers: [DiscordService],
   exports: [DiscordService],
